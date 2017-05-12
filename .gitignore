@@ -1,0 +1,10 @@
+instance
+*.pyc
+__pycache__
+venv
+*.swp
+*.swo
+server.log
+node_modules
+npm-degug.log
+data.db
