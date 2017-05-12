@@ -4,15 +4,15 @@ This interface is implemented using Flask and SQLAlchemy and includes the follow
   - printing processing labels through the Dymo JS framework,
   - querying inmate data from the TDCJ and FBOP websites,
   - printing warnings and alerts for inmates,
-  - printing shipment and request metrics.
+  - printing shipment and request metrics,
+  - logging in through Google your google account.
 
 # Installation
 Installing and running this software requires several steps.
 First, the Python and HTML/CSS/JS dependencies must be installed.
 
-
 ## Meeting Dependencies
-All of the Python dependencies must be installed as given in `requirements.txt`.
+All of the Python dependencies must be installed as given in [the requirements file](requirements.txt).
 It is recommended that these be installed in a virtual environment.
 ```bash
 pip install -r requirements.txt
@@ -27,10 +27,22 @@ npm install
 The above command requires that the javascript package manager `npm` is installed.
 
 ## Configuration
-Coming soon ...
+Next, you will need to set the configuration for your [development](conf/dev.conf) or [production](conf/production.conf) configuration files.
+To do this, set both the `secret_key` and `apikey` variables in the `[server]` section to distinct passwords that you keep secret.
+Then, go to the [Google Developer's Console](https://console.developers.google.com/apis/credentials) and create development or production credentials.
+The resulting IDs and keys need to be stored in the `ID` and `secret` variables in the `[google]` section.
 
 ## Initialization
-Coming soon ...
+Finally, you will need to initialize the database and create an authorized user.
+This is done using Python as follows:
+```python
+import ibp
+ibp.db.create_all()
+
+user = ibp.models.User(email='your_email@your_email.com', authorized=True)
+ibp.db.session.add(user)
+ibp.db.session.commit()
+```
 
 # Deployment
 Coming soon ...
