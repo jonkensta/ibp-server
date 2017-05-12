@@ -1,0 +1,11 @@
+<li class="list-group-item comment" id="comment-{{ comment.autoid }}">
+  <div>
+    <small>{{ comment.datetime.date() }} by <strong>{{ comment.author }}</strong></small>
+    <span class="pull-right">
+      <button class="btn btn-default btn-xs comment-delete">
+        <span class="glyphicon glyphicon-trash"></span>
+      </button>
+    </span>
+  </div>
+  <p>{{ comment.body }}</p>
+</li>

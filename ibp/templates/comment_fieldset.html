@@ -1,0 +1,11 @@
+{% import "renderers.html" as render %}
+<fieldset>
+  <div class="row">
+    <div class="col-xs-3">
+      {{ render.field(comment_form.author) }}
+    </div>
+    <div class="col-xs-9">
+      {{ render.field(comment_form.comment) }}
+    </div>
+  </div>
+</fieldset>

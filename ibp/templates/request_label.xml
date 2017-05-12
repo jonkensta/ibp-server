@@ -1,0 +1,261 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+{% set inmate = request.inmate %}
+{% set unit = request.inmate.unit %}
+<DieCutLabel Version="8.0" Units="twips">
+  <PaperOrientation>Landscape</PaperOrientation>
+  <Id>LargeAddress</Id>
+  <PaperName>30321 Large Address</PaperName>
+  <DrawCommands>
+    <RoundRectangle X="0" Y="0" Width="2025" Height="5020" Rx="270" Ry="270" />
+  </DrawCommands>
+  <ObjectInfo>
+    <BarcodeObject>
+      <Name>BARCODE</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>True</IsVariable>
+      <Text>{{ request.autoid }}</Text>
+      <Type>Code39</Type>
+      <Size>Small</Size>
+      <TextPosition>Bottom</TextPosition>
+      <TextFont Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+      <CheckSumFont Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+      <TextEmbedding>None</TextEmbedding>
+      <ECLevel>0</ECLevel>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <QuietZonesPadding Left="0" Top="0" Right="0" Bottom="0" />
+    </BarcodeObject>
+    <Bounds X="2719.24242424243" Y="261.636363636365" Width="2215.75757575757" Height="720" />
+  </ObjectInfo>
+  <ObjectInfo>
+    <TextObject>
+      <Name>TEXT_1</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>False</IsVariable>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <VerticalAlignment>Top</VerticalAlignment>
+      <TextFitMode>AlwaysFit</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>
+        <Element>
+          <String>{{ inmate and inmate.jurisdiction or unit and unit.jurisdiction }}</String>
+          <Attributes>
+            <Font Family="Arial" Size="12" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+            <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+          </Attributes>
+        </Element>
+      </StyledText>
+    </TextObject>
+    <Bounds X="322" Y="1738.78787878788" Width="1393.60606060605" Height="201.212121212119" />
+  </ObjectInfo>
+  <ObjectInfo>
+    <BarcodeObject>
+      <Name>BARCODE_1</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>True</IsVariable>
+      {% if inmate %}
+      <Text>{{ "{:08d}".format(inmate.id) }}</Text>
+      {% elif unit %}
+      <Text>{{ "{:03d}".format(unit.autoid) }}</Text>
+      {% else %}
+      <Text></Text>
+      {% endif %}
+      <Type>Code39</Type>
+      <Size>Small</Size>
+      <TextPosition>Bottom</TextPosition>
+      <TextFont Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+      <CheckSumFont Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+      <TextEmbedding>None</TextEmbedding>
+      <ECLevel>0</ECLevel>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <QuietZonesPadding Left="0" Top="0" Right="0" Bottom="0" />
+    </BarcodeObject>
+    <Bounds X="322" Y="271.333333333334" Width="2215.75757575757" Height="720" />
+  </ObjectInfo>
+  <ObjectInfo>
+    <TextObject>
+      <Name>TEXT__1</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>False</IsVariable>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <VerticalAlignment>Top</VerticalAlignment>
+      <TextFitMode>AlwaysFit</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>
+        <Element>
+            <String>{{ unit and unit.shipping_method or 'N/A' }}</String>
+          <Attributes>
+            <Font Family="Arial" Size="12" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+            <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+          </Attributes>
+        </Element>
+      </StyledText>
+    </TextObject>
+    <Bounds X="3485.48484848486" Y="1738.78787878788" Width="1325.72727272726" Height="201.212121212119" />
+  </ObjectInfo>
+  <ObjectInfo>
+    <TextObject>
+      <Name>TEXT_2</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>False</IsVariable>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <VerticalAlignment>Top</VerticalAlignment>
+      <TextFitMode>AlwaysFit</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>
+          <Element>
+            {% if inmate %}
+            <String>{{ inmate.last_name }}, {{ inmate.first_name }}</String>
+            {% elif unit %}
+            <String>{{ unit.street1 }}</String>
+            {% else %}
+            <String></String>
+            {% endif %}
+          <Attributes>
+            <Font Family="Arial" Size="12" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+            <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+          </Attributes>
+        </Element>
+      </StyledText>
+    </TextObject>
+    <Bounds X="322" Y="1050.30303030304" Width="4613" Height="293.333333333332" />
+  </ObjectInfo>
+  <ObjectInfo>
+    <TextObject>
+      <Name>TEXT</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>False</IsVariable>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <VerticalAlignment>Top</VerticalAlignment>
+      <TextFitMode>ShrinkToFit</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>
+        <Element>
+          {% if inmate %}
+          <String>INMATE ID</String>
+          {% elif unit %}
+          <String>UNIT ID</String>
+          {% else %}
+          <String></String>
+          {% endif %}
+          <Attributes>
+            <Font Family="Arial" Size="12" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+            <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+          </Attributes>
+        </Element>
+      </StyledText>
+    </TextObject>
+    <Bounds X="526.060606060611" Y="57.9999999999999" Width="1789.09090909091" Height="176.848484848483" />
+  </ObjectInfo>
+  <ObjectInfo>
+    <TextObject>
+      <Name>TEXT_3</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>False</IsVariable>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <VerticalAlignment>Middle</VerticalAlignment>
+      <TextFitMode>ShrinkToFit</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>
+        <Element>
+          <String>PACKAGE ID</String>
+          <Attributes>
+            <Font Family="Arial" Size="12" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+            <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+          </Attributes>
+        </Element>
+      </StyledText>
+    </TextObject>
+    <Bounds X="3233.78787878789" Y="57.9999999999999" Width="1192.72727272727" Height="164.575757575755" />
+  </ObjectInfo>
+  <ObjectInfo>
+    <TextObject>
+      <Name>TEXT__2</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>False</IsVariable>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <VerticalAlignment>Top</VerticalAlignment>
+      <TextFitMode>AlwaysFit</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>
+        <Element>
+          {% if inmate %}
+          <String>#{{ "{:08d}".format(inmate.id) }}</String>
+          {% elif unit %}
+          <String>#{{ "{:03d}".format(unit.autoid) }}</String>
+          {% else %}
+          <String></String>
+          {% endif %}
+          <Attributes>
+            <Font Family="Arial" Size="12" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+            <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+          </Attributes>
+        </Element>
+      </StyledText>
+    </TextObject>
+    <Bounds X="322" Y="1363.78787878788" Width="4613" Height="303.030303030301" />
+  </ObjectInfo>
+  <ObjectInfo>
+    <TextObject>
+      <Name>TEXT__3</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>False</IsVariable>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <VerticalAlignment>Top</VerticalAlignment>
+      <TextFitMode>AlwaysFit</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>
+        <Element>
+          <String>{{ unit and unit.street1 or "N/A"}}</String>
+          <Attributes>
+            <Font Family="Arial" Size="12" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+            <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+          </Attributes>
+        </Element>
+      </StyledText>
+    </TextObject>
+    <Bounds X="1846.69696969698" Y="1738.78787878788" Width="1490.57575757575" Height="201.212121212119" />
+  </ObjectInfo>
+</DieCutLabel>

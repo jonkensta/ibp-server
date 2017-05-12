@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+{% import "renderers.html" as render %}
+{% block title %}View Unit{% endblock title %}
+{% block content %}
+<div class="container">
+  <div class="page-header"><h1>{{ unit.name }} Unit</h1></div>
+  <div class="row top-buffer">
+    <div class="col-xs-12">
+      <form class="form-vertical" role="form" action="{{ url_for('view_unit', autoid=unit.autoid) }}" method="POST">
+        {{ form.csrf_token }}
+        <div class="row">
+          <div class="col-xs-12">
+            <div class="form-group">
+              <label for="name">Name</label>
+              <input type="text" class="form-control" readonly=readonly value="{{ unit.name }}">
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-xs-12">
+            {{ render.field(form.street1) }}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-xs-12">
+            {{ render.field(form.street2) }}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-xs-12 col-sm-4">
+            {{ render.field(form.city) }}
+          </div>
+          <div class="col-xs-6 col-sm-2">
+            {{ render.field(form.state) }}
+          </div>
+          <div class="col-xs-6 col-sm-3">
+            {{ render.field(form.zipcode) }}
+          </div>
+          <div class="col-xs-6 col-sm-3">
+            <div class="form-group">
+              <label for="jurisdiction">Jurisdiction </label>
+              <input type="text" class="form-control" readonly=readonly value="{{ unit.jurisdiction }}">
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-xs-8">
+            {{ render.field(form.url) }}
+          </div>
+          <div class="col-xs-4">
+            {{ render.field(form.shipping_method) }}
+          </div>
+        </div>
+
+        <div class="row top-buffer">
+          <div class="col-xs-2 form-group">
+            <button type="submit" class="btn btn-primary">Update</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{%- endblock content %}
+{% block scripts %}
+{{ super() }}
+<script type="application/javascript">
+jQuery(window).ready(function($){
+  // enable bootstrap tooltips
+  $('[data-toggle="tooltip"]').tooltip();
+})
+</script>
+{% endblock scripts %}

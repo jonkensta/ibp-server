@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "bootbox": "4.4.0",
+    "bootstrap": "3.3.6",
+    "bootstrap-datepicker": "1.5.1",
+    "chart.js": "^2.5.0",
+    "jquery": "2.2.0",
+    "moment": "^2.18.1"
+  }
+}

@@ -1,0 +1,20 @@
+<tr class="request" id="request-{{ request.autoid }}">
+  <td>
+    {{ request.date_postmarked }}
+  </td>
+  <td>{{ request.action }}</td>
+  {% if request.action == 'Filled' %}
+  <td>
+    <button type="button" class="btn btn-default btn-sm request-label-print" id="request-label-{{ request.autoid }}">
+      <span class="glyphicon glyphicon-print"></span>
+    </button>
+  </td>
+  {% else %}
+  <td></td>
+  {% endif %}
+  <td>
+    <button type="button" class="btn btn-default btn-sm request-delete">
+      <span class="glyphicon glyphicon-trash"></span>
+    </button>
+  </td>
+</tr>

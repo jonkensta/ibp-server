@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block title %}View Log{% endblock %}
+{% block content %}
+<div class="well well-lg">
+  {% for line in log %}
+  <div>{{ line|safe }}</div>
+  {% endfor %}
+</div>
+{% endblock content %}

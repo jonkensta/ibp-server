@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% block title %}List Units{% endblock title %}
+{% block content %}
+<div class="container">
+  <h1 class="page-header">Prison Units</h1>
+  <div class="row top-buffer">
+    <div class="col-xs-12">
+      <table class="table table-hover">
+        <tr>
+          <th>Name</th>
+          <th>Jurisdiction</th>
+          <th>Street 1</th>
+          <th>Street 2</th>
+          <th>City</th>
+          <th>State</th>
+          <th>Zipcode</th>
+          <th>Shipping</th>
+        </tr>
+        {% for unit in units %}
+        <tr class='clickable-row' data-link="{{ url_for('view_unit', autoid=unit.autoid) }}">
+          <td>{{ unit.name }}</td>
+          <td>{{ unit.jurisdiction }}</td>
+          <td>{{ unit.street1 }}</td>
+          <td>{{ unit.street2 }}</td>
+          <td>{{ unit.city }}</td>
+          <td>{{ unit.state }}</td>
+          <td>{{ unit.zipcode }}</td>
+          <td>{{ unit.shipping_method or ''}}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+</div>
+{%- endblock content %}
+{% block scripts %}
+{{ super() }}
+<script type="application/javascript">
+jQuery(window).ready(function($) {
+  $(".clickable-row").click(function() {
+    document.location = $(this).data("link");
+  });
+});
+</script>
+{%- endblock scripts %}
