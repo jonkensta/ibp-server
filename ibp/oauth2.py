@@ -75,9 +75,3 @@ def flow_from_config():
         scope=google['scope'].split(),
         redirect_uri=url_for('authorized', _external=True)
     )
-
-
-# def userinfo_from_credentials(credentials):
-#     service = apiclient.discovery.build('oauth2', 'v2', http=http)
-#     userinfo = service.userinfo().get().execute()
-#     return userinfo
