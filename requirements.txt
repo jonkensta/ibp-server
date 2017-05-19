@@ -1,5 +1,5 @@
 alembic
-BeautifulSoup
+BeautifulSoup4
 Flask
 Flask-Bootstrap
 Flask-SQLAlchemy
