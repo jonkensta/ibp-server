@@ -13,14 +13,14 @@ from flask_wtf.csrf import CSRFProtect
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 
-in_dev_mode = int(os.getenv('FLASK_DEBUG', '0'))
+in_dev_mode = bool(int(os.getenv('FLASK_DEBUG', '0')))
 config = SafeConfigParser()
 
 local_dir = os.path.dirname(os.path.realpath(__file__))
 root_dir = os.path.join(local_dir, os.path.pardir)
 
 config_fname = 'dev.conf' if in_dev_mode else 'production.conf'
-config_fpath = os.path.abspath(os.path.join(root_dir, 'conf', 'dev.conf'))
+config_fpath = os.path.abspath(os.path.join(root_dir, 'conf', config_fname))
 config.read(config_fpath)
 
 # configure logging
