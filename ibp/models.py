@@ -234,8 +234,7 @@ class Request(db.Model):
 
     shipment_autoid = db.Column(db.Integer, db.ForeignKey('shipments.autoid'))
     shipment = db.relationship(
-        'Shipment', uselist=False, back_populates='requests',
-        cascade='all, delete-orphan'
+        'Shipment', uselist=False, back_populates='requests'
     )
 
     @property
@@ -259,7 +258,9 @@ class Shipment(db.Model):
 
     weight = db.Column(db.Float, nullable=False)
 
-    requests = db.relationship('Request', back_populates='shipment')
+    requests = db.relationship(
+        'Request', back_populates='shipment'
+    )
 
     unit_id = db.Column(db.Integer, db.ForeignKey('units.autoid'))
     unit = db.relationship(
