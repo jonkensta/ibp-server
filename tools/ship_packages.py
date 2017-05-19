@@ -55,9 +55,12 @@ dazzle_template = jinja2.Template(u"""
 </DAZzle>
 """)
 
-
-PROGRAM_FILES = os.environ['ProgramW6432']
-DAZZLE = os.path.join(PROGRAM_FILES, 'DAZzle', 'DAZZLE.EXE')
+try:
+    PROGRAM_FILES = os.environ['ProgramW6432']
+except KeyError:
+    DAZZLE = None
+else:
+    DAZZLE = os.path.join(PROGRAM_FILES, 'DAZzle', 'DAZZLE.EXE')
 
 
 def purchase_and_print_postage(from_, to, weight):
