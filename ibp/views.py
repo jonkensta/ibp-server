@@ -439,8 +439,13 @@ def load_user(email):
 
 @login_manager.unauthorized_handler
 def unauthorized():
-    email = current_user.email
-    msg = "'{}' is not authorized for access".format(email)
+    try:
+        email = current_user.email
+    except AttributeError:
+        msg = "Anonymous login attempt failed"
+    else:
+        msg = "'{}' is not authorized for access".format(email)
+
     logger.debug(msg)
     flask.flash(msg, 'alert-danger')
     return redirect(url_for('index'))
