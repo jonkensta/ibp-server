@@ -247,7 +247,6 @@ jQuery(window).ready(function($) {
     var query = addComment("{{ inmate.autoid }}");
 
     query.done(function(result){
-      result = JSON.parse(result);
       $("#comment-list").prepend(result["comment"]);
       $("#comment-fieldset").html(result["fieldset"]);
 
@@ -300,8 +299,6 @@ jQuery(window).ready(function($) {
   var fillRequest = function(){
     var query = addRequest('Filled');
     query.done(function(result){
-      result = JSON.parse(result);
-
       $("#request-table-header").after(result["request"]);
       registerClickHandlers();
 
@@ -390,7 +387,6 @@ jQuery(window).ready(function($) {
   var tossRequest = function(request_id){
     var query = $.ajax({url: '/toss_request/' + request_id, type: 'POST' });
     query.done(function(result){
-      result = JSON.parse(result);
       var rendered = result["request"];
       $("#request-" + request_id).remove();
       $("#request-table-header").after(rendered);
@@ -407,11 +403,12 @@ jQuery(window).ready(function($) {
 
     fillRequest()
     .done(function(result){
-      var result = JSON.parse(result);
       var request_id = result["request_autoid"];
-      checkRequestAlerts(request_id).done(function(result){
+      checkRequestAlerts(request_id)
+      .done(function(result){
         if (!result) {
-          checkRequestWarnings(request_id).done(function(result){
+          checkRequestWarnings(request_id)
+          .done(function(result){
             if (result) {
               confirmRequest(request_id, result);
             }
@@ -430,7 +427,6 @@ jQuery(window).ready(function($) {
 
     var query = addRequest();
     query.done(function(result){
-      var result = JSON.parse(result);
       var request_id = result["request_autoid"];
       checkRequestAlerts(request_id).done(function(result){
         if (!result) {
