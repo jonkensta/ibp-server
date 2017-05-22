@@ -212,7 +212,6 @@ class Server(object):
 
 
 def generate_request_ids():
-
     while True:
         request_id = raw_input("Place request on the scale and scan ID: ")  # noqa
         try:
