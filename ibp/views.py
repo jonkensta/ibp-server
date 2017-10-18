@@ -345,6 +345,13 @@ def request_addresses(autoid):
 
 
 @ibp.csrf.exempt
+@app.route('/request_addresses/<int:autoid>', methods=['POST'])
+@ibp.appkey_required
+def unit_addresses(autoid):
+    logger.debug("loading request_addresses view for request %d", autoid)
+
+
+@ibp.csrf.exempt
 @app.route('/ship_request/<int:autoid>', methods=['POST'])
 @ibp.appkey_required
 def ship_request(autoid):
