@@ -39,7 +39,7 @@ dazzle_template = jinja2.Template(u"""
         {% endif %}
         <ToCity>{{ to.city }}</ToCity>
         <ToState>{{ to.state }}</ToState>
-        <ToPostalCode>{{ to_unit.zipcode }}</ToPostalCode>
+        <ToPostalCode>{{ to.zipcode }}</ToPostalCode>
 
         <ReturnAddress1>{{ return_['addressee'] }}</ReturnAddress1>
         <ReturnAddress2>{{ return_['street1'] }}</ReturnAddress2>
