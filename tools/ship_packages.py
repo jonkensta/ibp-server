@@ -64,8 +64,11 @@ else:
 
 
 def purchase_and_print_postage(from_, to, weight):
-    File = tempfile.NamedTemporaryFile(suffix='.xml')
-    with File() as infile, File() as outfile:
+
+    def new_tmpfile():
+        return tempfile.NamedTemporaryFile(suffix='.xml')
+
+    with new_tmpfile() as infile, new_tmpfile() as outfile:
         xml = dazzle_template.render(
             to=to, return_=from_, weight=weight, outfilename=outfile.name
         )
