@@ -13,13 +13,16 @@ from flask_wtf.csrf import CSRFProtect
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 
-in_dev_mode = bool(int(os.getenv('FLASK_DEBUG', '0')))
 config = SafeConfigParser()
+
+flask_env = os.getenv('FLASK_ENV', 'development')
+if flask_env == 'production':
+    config_fname = 'production.conf'
+else:
+    config_fname = 'development.conf'
 
 local_dir = os.path.dirname(os.path.realpath(__file__))
 root_dir = os.path.join(local_dir, os.path.pardir)
-
-config_fname = 'dev.conf' if in_dev_mode else 'production.conf'
 config_fpath = os.path.abspath(os.path.join(root_dir, 'conf', config_fname))
 config.read(config_fpath)
 
@@ -67,18 +70,16 @@ log.addHandler(log_handler)
 # setup flask application
 app = Flask(__name__)
 app.logger.setLevel(config.get('logging', 'level'))
-app.config.from_object(__name__)
 
 database_fpath = os.path.join(root_dir, config.get('database', 'database'))
 database_fpath = os.path.abspath(database_fpath)
 database_uri = 'sqlite:///' + database_fpath
 
-app.config.update(dict(
-    DEBUG=config.getboolean('server', 'debug'),
+app.config.update(
     SECRET_KEY=config.get('server', 'secret_key'),
     SQLALCHEMY_DATABASE_URI=database_uri,
     SQLALCHEMY_TRACK_MODIFICATIONS=False
-))
+)
 
 Bootstrap(app)
 csrf = CSRFProtect(app)
