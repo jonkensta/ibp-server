@@ -416,6 +416,8 @@ class User(db.Model, UniqueMixin):
 
     @orm.reconstructor
     def init_on_load(self):
+        if self.credentials is None:
+            return
         http = self.credentials.authorize(httplib2.Http())
         build_service = apiclient.discovery.build
         self.oauth2 = build_service('oauth2', 'v2', http=http)
