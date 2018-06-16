@@ -192,6 +192,9 @@ class Inmate(db.Model, UniqueMixin):
     def update_from_response(self, **kwargs):
         self.unit = Unit.query.filter_by(name=kwargs.get('unit')).first()
 
+        self.first_name = kwargs['first_name']
+        self.last_name = kwargs['last_name']
+
         self.sex = kwargs.get('sex')
         self.url = kwargs.get('url')
         self.race = kwargs.get('race')
