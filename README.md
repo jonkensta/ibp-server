@@ -9,7 +9,15 @@ This interface is implemented using Flask and SQLAlchemy and includes the follow
 
 # Installation
 Installing and running this software requires several steps.
-First, the Python and HTML/CSS/JS dependencies must be installed.
+First, you must clone this repository with submodules.
+Then, the Python and HTML/CSS/JS dependencies must be installed.
+Finally, you must configure the application and initialize the database.
+
+## Clone with Submodules
+To clone this repository with submodules included, run the following:
+```
+git clone --recurse-submodules https://github.com/jonkensta/ibp.git
+```
 
 ## Meeting Dependencies
 All of the Python dependencies must be installed as given in [the requirements file](requirements.txt).
