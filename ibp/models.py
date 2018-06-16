@@ -472,7 +472,7 @@ class Credentials(db.Model):
             token_uri=google.token_uri,
             user_agent=google.user_agent
         )
-        ibp.db.session.commit()
+        db.session.commit()
         self._google = self._build_google()
 
     def _build_google(self):
