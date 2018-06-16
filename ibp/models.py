@@ -414,14 +414,19 @@ class User(db.Model, UniqueMixin):
     def get(cls, email):
         return cls.query.filter_by(email=email).first()
 
-    @orm.reconstructor
-    def init_on_load(self):
-        if self.credentials is None:
-            return
+    def _init_gmail(self):
         http = self.credentials.authorize(httplib2.Http())
         build_service = apiclient.discovery.build
-        self.oauth2 = build_service('oauth2', 'v2', http=http)
-        self.gmail = build_service('gmail', 'v1', http=http)
+        self._oauth2 = build_service('oauth2', 'v2', http=http)
+        self._gmail = build_service('gmail', 'v1', http=http)
+
+    @property
+    def gmail(self):
+        try:
+            return self._gmail
+        except AttributeError:
+            self._init_gmail()
+            return self._gmail
 
     def __init__(self, email, **kwargs):
         super(User, self).__init__(email=email, **kwargs)
