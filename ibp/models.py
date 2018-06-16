@@ -428,7 +428,7 @@ class User(db.Model, UniqueMixin):
 
     @property
     def is_authenticated(self):
-        return self.authorized
+        return self.credentials is not None and self.authorized
 
     def get_id(self):
         return self.email
