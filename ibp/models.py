@@ -378,6 +378,19 @@ class Alert(db.Model):
         current_user.send_message(self.email, subject, body)
 
 
+def lazy_property(fn):
+    attr_name = '_lazy_' + fn.__name__
+
+    @property
+    @functools.wraps(fn)
+    def inner(self):
+        if not hasattr(self, attr_name):
+            setattr(self, attr_name, fn(self))
+        return getattr(self, attr_name)
+
+    return inner
+
+
 class User(db.Model, UniqueMixin):
     __tablename__ = 'users'
 
@@ -414,29 +427,24 @@ class User(db.Model, UniqueMixin):
     def get(cls, email):
         return cls.query.filter_by(email=email).first()
 
-    def _init_gmail(self):
-        http = self.credentials.authorize(httplib2.Http())
-        build_service = apiclient.discovery.build
-        self._oauth2 = build_service('oauth2', 'v2', http=http)
-        self._gmail = build_service('gmail', 'v1', http=http)
+    @lazy_property
+    def _http(self):
+        return self.credentials.authorize(httplib2.Http())
 
-    @property
-    def gmail(self):
-        try:
-            return self._gmail
-        except AttributeError:
-            self._init_gmail()
-            return self._gmail
+    @lazy_property
+    def _gmail(self):
+        return apiclient.discovery.build('gmail', 'v1', http=self._http)
 
-    def __init__(self, email, **kwargs):
-        super(User, self).__init__(email=email, **kwargs)
+    @lazy_property
+    def _oauth2(self):
+        return apiclient.discovery.build('oauth2', 'v2', http=self._http)
 
     @property
     def is_authenticated(self):
         return self.credentials is not None and self.authorized
 
-    def get_id(self):
-        return self.email
+    def __init__(self, email, **kwargs):
+        super(User, self).__init__(email=email, **kwargs)
 
     def _build_message(self, to, subject, body):
         message = MIMEText(body)
@@ -445,9 +453,12 @@ class User(db.Model, UniqueMixin):
         message['subject'] = subject
         return {'raw': base64.urlsafe_b64encode(message.as_string())}
 
+    def get_id(self):
+        return self.email
+
     def send_message(self, to, subject, body):
         msg = self._build_message(to, subject, body)
-        self.gmail.users().messages().send(userId='me', body=msg).execute()
+        self._gmail.users().messages().send(userId='me', body=msg).execute()
 
 
 class Credentials(db.Model):
