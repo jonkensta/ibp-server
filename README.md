@@ -56,7 +56,7 @@ ibp.db.session.commit()
 After going through each of the installation steps,
 you can run the server in development mode on your local machine by doing the following:
 ```bash
-FLASK_DEBUG=1 python run.py
+FLASK_ENV=development python run.py
 ```
 By default, this will load the interface on [localhost port 8000](http://localhost:8000).
 
