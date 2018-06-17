@@ -471,10 +471,6 @@ class Credentials(db.Model):
     token_uri = db.Column(db.String, nullable=False)
     user_agent = db.Column(db.String)
 
-    @orm.reconstructor
-    def init_on_load(self):
-        self._google = self._build_google()
-
     def __init__(self, google):
         super(Credentials, self).__init__(
             access_token=google.access_token,
@@ -488,7 +484,8 @@ class Credentials(db.Model):
         db.session.commit()
         self._google = self._build_google()
 
-    def _build_google(self):
+    @lazy_property
+    def _google(self):
         credentials = oauth2client.OAuth2Credentials(
             self.access_token,
             self.client_id,
