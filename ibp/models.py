@@ -1,7 +1,8 @@
 import base64
 import httplib2
-from email.mime.text import MIMEText
+import functools
 
+from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 
 import apiclient
@@ -94,8 +95,7 @@ class Inmate(db.Model, UniqueMixin):
 
     requests = db.relationship(
         'Request',
-        back_populates='inmate',
-        order_by="desc(Request.date_postmarked)",
+        back_populates='inmate', order_by="desc(Request.date_postmarked)",
     )
 
     alerts = db.relationship('Alert', back_populates='inmate')
@@ -105,7 +105,8 @@ class Inmate(db.Model, UniqueMixin):
     )
 
     _lookups_association = db.relationship(
-        'Lookup', order_by='desc(Lookup.datetime)'
+        'Lookup',
+        order_by='desc(Lookup.datetime)'
     )
     lookups = association_proxy('_lookups_association', 'datetime')
 
@@ -184,9 +185,7 @@ class Inmate(db.Model, UniqueMixin):
         return age < ttl
 
     def try_fetch_update(self):
-        if self.entry_is_fresh():
-            return
-        else:
+        if not self.entry_is_fresh():
             self = Inmate.query_by_autoid(self.autoid).first()
 
     def update_from_response(self, **kwargs):
@@ -365,9 +364,7 @@ class Alert(db.Model):
             "The volunteer processing this request has been asked "
             "to hold this letter for you.\n"
             "To stop receiving these alerts, please reply stating so."
-        )
-
-        body = body.format(
+        ).format(
             self.inmate.jurisdiction,
             self.inmate.last_name,
             self.inmate.first_name,
