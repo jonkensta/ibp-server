@@ -420,7 +420,7 @@ class User(db.Model, UniqueMixin):
         user = cls.as_unique(userinfo['email'])
 
         if user.credentials is None:
-            user.credentials = Credentials(google)
+            user.credentials = Credentials.from_google(google)
 
         return user
 
