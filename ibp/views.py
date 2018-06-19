@@ -406,8 +406,7 @@ def authorized():
 
     flow = oauth2.flow_from_config()
     google = flow.step2_exchange(args['code'])
-    credentials = models.Credentials(google)
-    user = models.User.from_credentials(credentials)
+    user = models.User.from_google(google)
     session.commit()
 
     login_user(user)

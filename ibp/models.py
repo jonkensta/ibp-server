@@ -392,7 +392,6 @@ class User(db.Model, UniqueMixin):
     __tablename__ = 'users'
 
     autoid = db.Column(db.Integer, primary_key=True)
-
     email = db.Column(db.String, nullable=False, unique=True)
 
     is_active = True
@@ -413,11 +412,15 @@ class User(db.Model, UniqueMixin):
         return cls.query.filter_by(email=email)
 
     @classmethod
-    def from_credentials(cls, credentials):
-        http = credentials.authorize(httplib2.Http())
+    def from_google(cls, google):
+        http = google.authorize(httplib2.Http())
         service = apiclient.discovery.build('oauth2', 'v2', http=http)
         userinfo = service.userinfo().get().execute()
-        user = cls.as_unique(userinfo['email'], credentials=credentials)
+        user = cls.as_unique(userinfo['email'])
+
+        if user.credentials is None:
+            user.credentials = Credentials(google)
+
         return user
 
     @classmethod
@@ -471,8 +474,12 @@ class Credentials(db.Model):
     token_uri = db.Column(db.String, nullable=False)
     user_agent = db.Column(db.String)
 
-    def __init__(self, google):
-        super(Credentials, self).__init__(
+    def __init__(self, **kwargs):
+        super(Credentials, self).__init__(**kwargs)
+
+    @classmethod
+    def from_google(cls, google):
+        kwargs = dict(
             access_token=google.access_token,
             client_id=google.client_id,
             client_secret=google.client_secret,
@@ -481,8 +488,9 @@ class Credentials(db.Model):
             token_uri=google.token_uri,
             user_agent=google.user_agent
         )
+        credentials = cls(**kwargs)
         db.session.commit()
-        self._google = self._build_google()
+        return credentials
 
     @lazy_property
     def _google(self):
