@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import apiclient
 import oauth2client.client as oauth2client
 
-from sqlalchemy import func, orm
+import sqlalchemy
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 
@@ -155,9 +155,10 @@ class Inmate(db.Model, UniqueMixin):
         session.add_all(inmates)
         session.commit()
 
+        sql_lower = sqlalchemy.func.lower
         inmates = (
             cls.query
-            .filter(func.lower(Inmate.last_name) == func.lower(last_name))
+            .filter(sql_lower(Inmate.last_name) == sql_lower(last_name))
             .filter(Inmate.first_name.ilike(first_name + "%"))
         )
         return inmates, errors
