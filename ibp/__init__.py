@@ -30,6 +30,7 @@ config.read(config_fpath)
 log = logging.getLogger()
 log.setLevel(config.get('logging', 'level'))
 
+logging.getLogger('urllib3').setLevel(logging.ERROR)
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 logging.getLogger('requests').setLevel(logging.ERROR)
 logging.getLogger('oauth2client.client').setLevel(logging.ERROR)
