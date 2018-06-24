@@ -1,4 +1,5 @@
 import threading
+from urlparse import urljoin
 
 import oauth2client.client as oauth2client
 
@@ -67,11 +68,17 @@ class DatabaseStore(oauth2client.Storage):
         self._connection.execute(sql, self._autoid)
 
 
+scopes = [
+    urljoin('https://www.googleapis.com/auth', scope)
+    for scope in ['userinfo.email', 'userinfo.profile']
+]
+
+
 def flow_from_config():
     google = ibp.get_config_section('google')
     return oauth2client.OAuth2WebServerFlow(
         client_id=google['id'],
         client_secret=google['secret'],
-        scope=google['scope'].split(),
+        scope=scopes,
         redirect_uri=url_for('authorized', _external=True)
     )
