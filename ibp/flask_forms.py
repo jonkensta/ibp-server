@@ -93,15 +93,6 @@ class Unit(FlaskForm):
 
 
 class Comment(FlaskForm):
-    author = fields.StringField(
-        'author', [
-            validators.InputRequired(),
-            validators.length(
-                min=1,
-                message="Please input your name"
-            )
-        ]
-    )
     comment = fields.StringField(
         'comment', [
             validators.InputRequired(),

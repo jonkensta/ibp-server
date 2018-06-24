@@ -213,8 +213,12 @@ class Lookup(db.Model):
 
     inmate_id = db.Column(db.Integer, db.ForeignKey('inmates.autoid'))
 
+    done_by_id = db.Column(db.Integer, db.ForeignKey('users.autoid'))
+    done_by = db.relationship('User', uselist=False)
+
     def __init__(self, dt):
         self.datetime = dt
+        self.done_by = current_user
         super(Lookup, self).__init__()
 
 
@@ -239,6 +243,9 @@ class Request(db.Model):
     shipment = db.relationship(
         'Shipment', uselist=False, back_populates='requests'
     )
+
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.autoid'))
+    created_by = db.relationship('User', uselist=False)
 
     @property
     def status(self):
@@ -279,8 +286,10 @@ class Comment(db.Model):
 
     autoid = db.Column(db.Integer, primary_key=True)
 
+    author_id = db.Column(db.Integer, db.ForeignKey('users.autoid'))
+    author = db.relationship('User', uselist=False)
+
     datetime = db.Column(db.DateTime, nullable=False)
-    author = db.Column(db.String, nullable=False)
     body = db.Column(db.Text, nullable=False)
 
     inmate_id = db.Column(db.Integer, db.ForeignKey('inmates.autoid'))
@@ -292,7 +301,7 @@ class Comment(db.Model):
     def from_form(cls, form):
         return cls(
             datetime=datetime.today(),
-            author=form.author.data,
+            author=current_user,
             body=form.comment.data,
         )
 
@@ -394,6 +403,7 @@ class User(db.Model, UniqueMixin):
 
     autoid = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String, nullable=False, unique=True)
+    name = db.Column(db.String, nullable=False, default='Anonymous')
 
     is_active = True
     is_anonymous = False
@@ -418,6 +428,7 @@ class User(db.Model, UniqueMixin):
         service = apiclient.discovery.build('oauth2', 'v2', http=http)
         userinfo = service.userinfo().get().execute()
         user = cls.as_unique(userinfo['email'])
+        user.name = userinfo.get('name', '') or userinfo['email']
 
         if user.credentials is None:
             user.credentials = Credentials.from_google(google)
