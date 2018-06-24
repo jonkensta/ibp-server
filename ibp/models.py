@@ -409,7 +409,7 @@ class User(db.Model, UniqueMixin):
     is_anonymous = False
 
     authorized = db.Column(
-        db.Boolean(name='is_boolean'), default=False, nullable=False
+        db.Boolean(name='is_authorized_boolean'), default=False, nullable=False
     )
 
     credentials_id = db.Column(db.Integer, db.ForeignKey('credentials.autoid'))
