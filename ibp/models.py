@@ -363,6 +363,8 @@ class Alert(db.Model):
     inmate = db.relationship('Inmate', uselist=False, back_populates='alerts')
 
     def notify(self):
+        raise NotImplementedError
+
         subject = "New request from {} inmate {}, {} #{:08d}".format(
             self.inmate.jurisdiction,
             self.inmate.last_name,
@@ -462,19 +464,8 @@ class User(db.Model, UniqueMixin):
     def __init__(self, email, **kwargs):
         super(User, self).__init__(email=email, **kwargs)
 
-    def _build_message(self, to, subject, body):
-        message = MIMEText(body)
-        message['to'] = to
-        message['from'] = self.email
-        message['subject'] = subject
-        return {'raw': base64.urlsafe_b64encode(message.as_string())}
-
     def get_id(self):
         return self.email
-
-    def send_message(self, to, subject, body):
-        msg = self._build_message(to, subject, body)
-        self._gmail.users().messages().send(userId='me', body=msg).execute()
 
 
 class Credentials(db.Model):
