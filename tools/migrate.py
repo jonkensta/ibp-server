@@ -182,8 +182,8 @@ def generate_comments(connection, session):
 
 
 def main():
-    desc = "Import data from IBP database"
-    parser = argparse.ArgumentParser(description=desc)
+    """Import data from IBP database"""
+    parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument('filepath', help="Database filepath")
     args = parser.parse_args()
 
