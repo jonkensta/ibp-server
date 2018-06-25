@@ -126,8 +126,9 @@ class Inmate(db.Model, UniqueMixin):
         if inmate is None or inmate.entry_is_fresh():
             return cls.query.filter_by(autoid=autoid)
 
+        timeout = ibp.config.getfloat('providers', 'timeout')
         inmates, _ = providers.query_by_inmate_id(
-            inmate.id, jurisdictions=[inmate.jurisdiction]
+            inmate.id, jurisdictions=[inmate.jurisdiction], timeout=timeout
         )
         inmates = map(cls.from_response, inmates)
 
@@ -149,7 +150,10 @@ class Inmate(db.Model, UniqueMixin):
 
     @classmethod
     def query_by_name(cls, first_name, last_name):
-        inmates, errors = providers.query_by_name(first_name, last_name)
+        timeout = ibp.config.getfloat('providers', 'timeout')
+        inmates, errors = providers.query_by_name(
+            first_name, last_name, timeout=timeout
+        )
         inmates = map(Inmate.from_response, inmates)
 
         session.add_all(inmates)
