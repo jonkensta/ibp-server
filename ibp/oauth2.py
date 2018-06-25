@@ -69,7 +69,7 @@ class DatabaseStore(oauth2client.Storage):
 
 
 scopes = [
-    urljoin('https://www.googleapis.com/auth', scope)
+    urljoin('https://www.googleapis.com/auth/', scope)
     for scope in ['userinfo.email', 'userinfo.profile']
 ]
 
