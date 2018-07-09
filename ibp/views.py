@@ -5,7 +5,7 @@ import flask
 from flask import render_template, render_template_string
 from flask import url_for, redirect, flash, jsonify
 
-from flask_login import login_user, logout_user, login_required, current_user
+from flask_login import login_user, logout_user, current_user
 
 import ibp
 
@@ -29,7 +29,6 @@ def index():
 
 
 @app.route('/view_log')
-@login_required
 def view_log():
     logger.debug("loading log")
     ibp.log_handler.flush()
@@ -38,7 +37,6 @@ def view_log():
 
 
 @app.route('/inmates', methods=['GET', 'POST'])
-@login_required
 def search_inmates():
     form = flask_forms.InmateSearchForm()
 
@@ -85,7 +83,6 @@ def search_inmates():
 
 
 @app.route('/view_inmate/<int:autoid>')
-@login_required
 def view_inmate(autoid):
     inmate = models.Inmate.query_by_autoid(autoid).first_or_404()
     logger.debug(
@@ -109,7 +106,6 @@ def view_inmate(autoid):
 
 
 @app.route('/add_request/<int:inmate_autoid>', methods=['POST'])
-@login_required
 def add_request(inmate_autoid):
     inmate = models.Inmate.query_by_autoid(inmate_autoid).first_or_404()
 
@@ -145,7 +141,6 @@ def add_request(inmate_autoid):
 
 
 @app.route('/request_alerts/<int:autoid>', methods=['POST'])
-@login_required
 def request_alerts(autoid):
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
     logger.debug(
@@ -186,7 +181,6 @@ def request_alerts(autoid):
 
 
 @app.route('/request_warnings/<int:autoid>', methods=['POST'])
-@login_required
 def request_warnings(autoid):
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
     logger.debug("checking warnings for request #%d", autoid)
@@ -214,7 +208,6 @@ def request_warnings(autoid):
 
 
 @app.route('/request_label/<int:autoid>', methods=['POST'])
-@login_required
 def request_label(autoid):
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
     logger.debug("rendering label for request #%d", autoid)
@@ -222,7 +215,6 @@ def request_label(autoid):
 
 
 @app.route('/toss_request/<int:autoid>', methods=['POST'])
-@login_required
 def toss_request(autoid):
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
 
@@ -238,7 +230,6 @@ def toss_request(autoid):
 
 
 @app.route('/delete_request/<int:autoid>', methods=['DELETE'])
-@login_required
 def delete_request(autoid):
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
     logger.debug("deleting request #%d", autoid)
@@ -248,7 +239,6 @@ def delete_request(autoid):
 
 
 @app.route('/add_comment/<int:inmate_autoid>', methods=['POST'])
-@login_required
 def add_comment(inmate_autoid):
     inmate = models.Inmate.query_by_autoid(inmate_autoid).first_or_404()
     form = flask_forms.Comment()
@@ -274,7 +264,6 @@ def add_comment(inmate_autoid):
 
 
 @app.route('/delete_comment/<int:autoid>', methods=['DELETE'])
-@login_required
 def delete_comment(autoid):
     comment = models.Comment.query.filter_by(autoid=autoid).first_or_404()
     logger.debug("deleting comment #%d", autoid)
@@ -284,14 +273,12 @@ def delete_comment(autoid):
 
 
 @app.route('/list_units')
-@login_required
 def list_units():
     logger.debug("loading list_units")
     return render_template('list_units.html', units=models.Unit.query)
 
 
 @app.route('/view_unit/<int:autoid>', methods=['GET', 'POST'])
-@login_required
 def view_unit(autoid):
     unit = models.Unit.query.filter_by(autoid=autoid).first_or_404()
     form = flask_forms.Unit()
@@ -429,7 +416,6 @@ login_manager.login_message = None
 
 
 @app.route('/logout')
-@login_required
 def logout():
     logout_user()
     return redirect(url_for('index'))
@@ -458,7 +444,6 @@ def unauthorized():
 
 
 @ibp.app.route('/metrics')
-@login_required
 def metrics():
     """
     Handles a GET request for the package metrics page.
@@ -467,7 +452,6 @@ def metrics():
 
 
 @ibp.app.route('/metrics/request_counts')
-@login_required
 def request_counts():
     """
     Handles an AJAX request for the package counts by month.
@@ -490,7 +474,6 @@ def request_counts():
 
 
 @ibp.app.route('/metrics/new_request_counts')
-@login_required
 def new_request_counts():
     """
     Handles an AJAX request for the number of first-timers by month.
@@ -517,7 +500,6 @@ def new_request_counts():
 
 
 @ibp.app.route('/metrics/shipping_volume')
-@login_required
 def shipping_volume():
     sql = """
         SELECT

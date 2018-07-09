@@ -222,7 +222,7 @@ class Lookup(db.Model):
 
     def __init__(self, dt):
         self.datetime = dt
-        self.done_by = current_user
+        self.done_by = None  # FIXME
         super(Lookup, self).__init__()
 
 
