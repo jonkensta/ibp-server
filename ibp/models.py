@@ -113,7 +113,7 @@ class Inmate(db.Model, UniqueMixin):
     @classmethod
     def from_response(cls, response):
         jurisdiction = response['jurisdiction']
-        id_ = response['id']
+        id_ = int(response['id'].replace('-', ''))
         with session.no_autoflush:
             inmate = cls.as_unique(jurisdiction, id_)
             inmate.update_from_response(**response)
