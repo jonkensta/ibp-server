@@ -305,7 +305,7 @@ class Comment(db.Model):
     def from_form(cls, form):
         return cls(
             datetime=datetime.today(),
-            author=current_user,
+            author=None,
             body=form.comment.data,
         )
 
