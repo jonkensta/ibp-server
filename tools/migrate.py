@@ -1,5 +1,8 @@
 import os
+import tempfile
 import argparse
+import itertools
+import subprocess
 from datetime import datetime
 from contextlib import closing
 
@@ -154,7 +157,8 @@ def comments_length(connection):
     sql = """
         SELECT COUNT(*)
         FROM comments
-        WHERE datetime <> "1990-01-01 01:01:01.000000"
+        WHERE body <> '' AND
+              datetime <> "1990-01-01 01:01:01.000000"
     """
     return connection.execute(sql).fetchone().values()[0]
 
@@ -162,14 +166,14 @@ def comments_length(connection):
 def generate_comments(connection, session):
     sql = """
         SELECT
-            id, datetime, body, author,
+            id, datetime, body,
             inmate_id, inmate_jurisdiction
         FROM comments
-        WHERE datetime <> "1990-01-01 01:01:01.000000"
+        WHERE body <> '' AND
+              datetime <> "1990-01-01 01:01:01.000000"
     """
     for comment in connection.execute(sql):
         comment['autoid'] = comment.pop('id')
-
         comment['datetime'] = parse_datetime_or_None(comment['datetime'])
 
         inmate_id = comment.pop('inmate_id')
@@ -181,10 +185,23 @@ def generate_comments(connection, session):
         yield Comment(**comment)
 
 
+def edit_comment(comment):
+    with tempfile.NamedTemporaryFile(suffix=".tmp") as tf:
+        tf.write(comment.body)
+        tf.flush()
+        subprocess.check_call(['vim', tf.name])
+
+        tf.seek(0)
+        comment.body = tf.read()
+        return comment if comment.body.strip() else None
+
+
 def main():
     """Import data from IBP database"""
+
     parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument('filepath', help="Database filepath")
+    parser.add_argument('--edit_comments', action='store_true', default=False)
     args = parser.parse_args()
 
     with closing(sqlite3.connect(args.filepath)) as connection:
@@ -192,6 +209,19 @@ def main():
 
         with ibp.app.app_context():
             session = ibp.db.session
+
+            print("Adding comments")
+            comments = generate_comments(connection, session)
+            progress = ProgressBar(comments_length(connection))
+            comments = progress(comments)
+
+            if args.edit_comments:
+                comments = itertools.imap(edit_comment, comments)
+                comments = itertools.ifilter(None, comments)
+
+            for comment in comments:
+                session.add(comment)
+                session.commit()
 
             print("Adding units")
             units = generate_units(connection)
@@ -207,13 +237,6 @@ def main():
             progress = ProgressBar(inmates_length(connection))
             for inmate in progress(inmates):
                 session.add(inmate)
-                session.commit()
-
-            print("Adding comments")
-            comments = generate_comments(connection, session)
-            progress = ProgressBar(comments_length(connection))
-            for comment in progress(comments):
-                session.add(comment)
                 session.commit()
 
             print("Adding requests")
