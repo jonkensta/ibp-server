@@ -65,29 +65,25 @@ def inmate(inmate):
     return messages
 
 
-def request(request):
+def request(inmate, postmarkdate):
     messages = []
 
     def was_filled(request):
         return request.action == 'Filled'
 
-    requests = filter(was_filled, request.inmate.requests)
-
-    def not_this_request(r):
-        return r.autoid != request.autoid
-
-    requests = filter(not_this_request, requests)
+    requests = filter(was_filled, inmate.requests)
 
     try:
         last_filled_request = requests.pop(0)
     except IndexError:
         return messages
 
-    td = request.date_postmarked - last_filled_request.date_postmarked
+    td = postmarkdate - last_filled_request.date_postmarked
     days = ibp.config.getint('warnings', 'min_postmark_timedelta')
     min_td = timedelta(days=days)
 
     msg = None
+
     if td.days < 0:
         msg = "There is a request with a postmark after this one."
         messages.append(msg)
@@ -98,6 +94,7 @@ def request(request):
         msg = "Only {} days since last postmark.".format(td.days)
         messages.append(msg)
 
-    logger.debug(msg)
+    if msg is not None:
+        logger.debug(msg)
 
     return messages

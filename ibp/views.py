@@ -2,8 +2,8 @@ import logging
 from datetime import datetime, date
 
 import flask
-from flask import render_template, render_template_string
 from flask import url_for, redirect, flash, jsonify
+from flask import render_template, render_template_string
 
 from flask_login import login_user, logout_user, current_user
 
@@ -140,27 +140,28 @@ def add_request(inmate_autoid):
     return jsonify(data)
 
 
-@app.route('/request_alerts/<int:autoid>', methods=['POST'])
-def request_alerts(autoid):
-    request = models.Request.query.filter_by(autoid=autoid).first_or_404()
+@app.route('/inmate_alerts/<int:autoid>')
+def inmate_alerts(autoid):
+    inmate = models.Inmate.query.filter_by(autoid=autoid).first_or_404()
+
     logger.debug(
         "checking alerts for %s inmate #%08d",
-        request.inmate.jurisdiction, request.inmate.id
+        inmate.jurisdiction, inmate.id
     )
 
-    if not request.inmate.alerts:
+    if not inmate.alerts:
         logger.debug(
             "no alerts were found for %s inmate #%08d",
-            request.inmate.jurisdiction, request.inmate.id
+            inmate.jurisdiction, inmate.id
         )
         return ''
 
     logger.debug(
         "alerts were found for %s inmate #%08d",
-        request.inmate.jurisdiction, request.inmate.id
+        inmate.jurisdiction, inmate.id
     )
 
-    for alert in request.inmate.alerts:
+    for alert in inmate.alerts:
         alert.notify()
 
     template = """
@@ -177,23 +178,41 @@ def request_alerts(autoid):
     """
     template = template.strip()
 
-    return render_template_string(template, alerts=request.inmate.alerts)
+    return render_template_string(template, alerts=inmate.alerts)
 
 
 @app.route('/request_warnings/<int:autoid>', methods=['POST'])
 def request_warnings(autoid):
-    request = models.Request.query.filter_by(autoid=autoid).first_or_404()
-    logger.debug("checking warnings for request #%d", autoid)
+    inmate = models.Inmate.query.filter_by(autoid=autoid).first_or_404()
+
+    date_str = flask.request.form.get('postmarkdate', '')
+    try:
+        postmarkdate = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return "Please enter the USPS postmark date on the envelope.", 400
+    else:
+        flask.session['postmarkdate'] = postmarkdate.strftime("%Y-%m-%d")
+
+    logger.debug(
+        "checking warnings for %s inmate #%08d, postmarkdate %s",
+        inmate.jurisdiction, inmate.id, postmarkdate
+    )
 
     messages = []
-    messages.extend(warnings.inmate(request.inmate))
-    messages.extend(warnings.request(request))
+    messages.extend(warnings.inmate(inmate))
+    messages.extend(warnings.request(inmate, postmarkdate))
 
     if not messages:
-        logger.debug("no warnings were found for request #%d", request.autoid)
+        logger.debug(
+            "no warnings found for %s inmate #%08d, postmarkdate %s",
+            inmate.jurisdiction, inmate.id, postmarkdate
+        )
         return ''
 
-    logger.debug("warnings were found for request #%d", request.autoid)
+    logger.debug(
+        "warnings were found for %s inmate #%08d, postmarkdate %s",
+        inmate.jurisdiction, inmate.id, postmarkdate
+    )
 
     template = """
         <ul>
@@ -214,19 +233,25 @@ def request_label(autoid):
     return render_template('request_label.xml', request=request)
 
 
-@app.route('/toss_request/<int:autoid>', methods=['POST'])
-def toss_request(autoid):
+@app.route('/request_info/<int:autoid>', methods=['POST'])
+def request_info(autoid):
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
+    logger.debug("fetching information for request #%d", autoid)
 
-    logger.debug("tossing request #%d", autoid)
-    request.action = 'Tossed'
-    session.commit()
+    if request.inmate is None:
+        return "Request does not have an associated inmate", 400
 
-    request = models.Request.query.filter_by(autoid=request.autoid).one()
-    rendered_request = render_template('request.html', request=request)
+    inmate = request.inmate
+    unit = inmate.unit
 
-    data = dict(request_autoid=str(request.autoid), request=rendered_request)
-    return jsonify(data)
+    return jsonify({
+        'inmate_jurisdiction': inmate.jurisdiction,
+        'inmate_name': inmate.last_name + ', ' + inmate.first_name,
+        'inmate_id': '%08d' % inmate.id,
+        'package_id': request.autoid,
+        'unit_name': unit and unit.street1 or 'N/A',
+        'unit_shipping_method': unit and unit.shipping_method or 'N/A',
+    })
 
 
 @app.route('/delete_request/<int:autoid>', methods=['DELETE'])

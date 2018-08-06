@@ -178,304 +178,302 @@
 {% block scripts %}
 {{ super() }}
 <script type="application/javascript" src="{{ url_for('static', filename='node_modules/bootstrap-datepicker/dist/js/bootstrap-datepicker.min.js') }}"></script>
-<script type="application/javascript" charset="UTF-8" src="{{ url_for('static', filename='js/DYMO.Label.Framework.3.0.js') }}"></script>
 <script type="application/javascript" src="{{ url_for('static', filename='node_modules/bootbox/bootbox.min.js') }}"></script>
 <script type="application/javascript">
-var printLabel = function(labelXml){
-  var label = dymo.label.framework.openLabelXml(labelXml);
-
-  var printers = dymo.label.framework.getPrinters();
-  if (printers.length === 0)
-    throw "No DYMO printers are installed.";
-
-  var isLabelWriterPrinter = function(printer) {
-      return (printer.printerType === "LabelWriterPrinter");
-  };
-  printers = printers.filter(isLabelWriterPrinter);
-
-  var isConnected = function(printer) {
-      return (printer.isConnected);
-  }
-  printers = printers.filter(isConnected);
-
-  var isLocal = function(printer) {
-      return (printer.isLocal);
-  }
-  printers = printers.filter(isLocal);
-
-  if (printers.length === 0) {
-    throw "No DYMO label writers connected."
-  } else if (printers.length > 1) {
-    throw "More than one DYMO label writer connected."
-  }
-
-  var printerName = printers[0].name;
-  label.print(printerName);
-};
-
 jQuery(window).ready(function($) {
-  // enable bootstrap tooltips
-  $('[data-toggle="tooltip"]').tooltip(); 
+    // enable bootstrap tooltips
+    $('[data-toggle="tooltip"]').tooltip();
 
-  // enable CRSF protection
-  var csrf_token = "{{ csrf_token() }}";
-
-  $.ajaxSetup({
-    beforeSend: function(xhr, settings) {
-      if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
-        xhr.setRequestHeader("X-CSRFToken", csrf_token);
-      }
-    }
-  });
-
-  // handle adding and removing new comments
-  var addComment = function(inmate_autoid){
-    return $.ajax({
-      url: '/add_comment/' + inmate_autoid,
-      type: 'POST',
-      data: {
-        comment: $("#comment").val()
-      }
-    });
-  };
-
-  $("#comment-submit").click(function(e){
-    e.stopPropagation();
-    $("#comment-submit").prop("disabled", true);
-
-    var query = addComment("{{ inmate.autoid }}");
-
-    query.done(function(result){
-      $("#comment-list").prepend(result["comment"]);
-      $("#comment-fieldset").html(result["fieldset"]);
-
-      // hide the modal
-      $('#comment-modal').modal('hide')
-
-      // re-register the delete click handler
-      registerClickDeleteComment();
+    // enable CRSF protection
+    var csrf_token = "{{ csrf_token() }}";
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", csrf_token);
+            }
+        }
     });
 
-    query.fail(function(result){
-      $("#comment-fieldset").html(result.responseText);
-      $('[data-toggle="tooltip"]').tooltip(); 
-    });
+    var comments = (function() {
+        var getID = function(element) {
+            return element.attr('id').replace('comment-', '');
+        };
 
-    query.always(function(result){
-      setTimeout(function() { $("#comment-submit").prop("disabled", false); }, 1000);
-    });
-  });
+        var add = function(comment) {
+            var url = '/add_comment/{{ inmate.autoid }}';
+            var query = $.post(url, {comment: comment}, null, 'json');
 
-  var deleteComment = function(comment_id){
-    var query = $.ajax({ url: '/delete_comment/' + comment_id, type: 'DELETE' });
-    query.done(function(result){
-      $("#comment-" + comment_id).remove();
-    });
-    return query;
-  };
+            query.done(function(result) {
+                $("#comment-list").prepend(result["comment"]);
+            });
 
-  var registerClickDeleteComment = function(){
-    $(".comment-delete").click(function(e){
-      e.stopPropagation();
-      $(e.target).prop("disabled", true);
-      var comment_id = $(e.target).parents('li.comment')[0].id.replace('comment-', '');
-      deleteComment(comment_id)
-      .fail(function(result){
-        setTimeout(function() { $(e.target).prop("disabled", false); }, 1000);
-      });
-    });
-  };
-  registerClickDeleteComment();
+            return query;
+        };
 
-  // handle adding and removing new requests
-  var addRequest = function(action){
-    return $.ajax({
-      url: '/add_request/{{ inmate.autoid }}', type: 'POST',
-      data: { postmarkdate: $("#postmarkdate").val(), action: action }
-    });
-  };
+        var delete_ = function(id) {
+            var url = '/delete_comment/' + id;
+            var query = $.ajax({ url: url, type: 'DELETE' });
+            query.done(function(){
+                $("#comment-" + id).remove();
+            });
+            return query;
+        };
 
-  var fillRequest = function(){
-    var query = addRequest('Filled');
-    query.done(function(result){
-      $("#request-table-header").after(result["request"]);
-      registerClickHandlers();
+        var handleDeleteButton = function(e) {
+            e.stopPropagation();
+            $(e.target).prop("disabled", true);
 
-      var request_id = result["request_autoid"];
-      var request_label_id = "#request-label-" + request_id;
-      $(request_label_id).focus();
-    });
-    return query;
-  };
+            var id = getID($(e.target).closest('li.comment'));
+            var query = delete_(id);
 
-  var checkRequestWarnings = function(request_id){
-    var query = $.ajax({ url: '/request_warnings/' + request_id, type: 'POST' });
-    query.done(function(result){
-      if (!result) {
-        var request_label_id = "#request-label-" + request_id;
-        $(request_label_id).focus();
-      }
-    });
-    return query;
-  };
+            query.fail(function() {
+                setTimeout(function() {
+                    $(e.target).prop("disabled", false);
+                }, 1000);
+            });
+        };
 
-  var checkRequestAlerts = function(request_id){
-    var query = $.ajax({ url: '/request_alerts/' + request_id, type: 'POST' });
-    query.done(function(result){
-      if (result) {
-        bootbox.dialog({
-          title: "Alert for this Inmate",
-          closeButton: false,
-          message: result,
-          buttons: {
-            success: {
-              label: 'OK',
-              callback: function (result) {
-                $('.bootbox').on('hidden.bs.modal', function (e) {
-                  $("#inmate_id").focus();
+        var handleSubmitButton = function(e) {
+            e.stopPropagation();
+            $("#comment-submit").prop("disabled", true);
+
+            var query = add($("#comment").val());
+
+            query.done(function(result) {
+                $("#comment-fieldset").html(result["fieldset"]);
+                $('#comment-modal').modal('hide');
+                $(".comment-delete").click(handleDeleteButton);
+            });
+
+            query.fail(function(result) {
+                $("#comment-fieldset").html(result.responseText);
+                $('[data-toggle="tooltip"]').tooltip();
+            });
+
+            query.always(function() {
+                setTimeout(function() {
+                    $("#comment-submit").prop("disabled", false);
+                }, 1000);
+            });
+        };
+
+        $("#comment-submit").click(handleSubmitButton);
+        $(".comment-delete").click(handleDeleteButton);
+    })();
+
+
+    var requests = (function() {
+
+        var add = function(action) {
+            var url = '/add_request/{{ inmate.autoid }}';
+            var postmarkdate = $("#postmarkdate").val();
+            var data = {postmarkdate: postmarkdate, action: action};
+            var query = $.post(url, data, null, 'json');
+            query.fail(function(result) { alert(result.responseText); });
+            return query;
+        };
+
+        var fill = function() {
+            var query = add('Filled');
+
+            query.done(function(result) {
+                $("#request-table-header").after(result["request"]);
+                registerHandlers();
+            });
+
+            return query;
+        };
+
+        var handleFillButton = function(e) {
+            e.stopPropagation();
+            $("#request-fill").prop("disabled", true);
+
+            var alerts = checkAlerts();
+
+            alerts.done(function() {
+                var warnings = checkWarnings();
+
+                warnings.done(function() {
+                    fill().done(function(result) {
+                        var id = result["request_autoid"];
+                        $('#request-label-' + id).focus();
+                    });
                 });
-              }
-            }
-          }
-        });
-      }
-    });
-    return query;
-  };
 
-  var confirmRequest = function(request_id, message){
-    bootbox.confirm({
-      title: "Request Warnings",
-      message: message,
-      buttons: { cancel: { label: 'Bypass' }, confirm: { label: 'Toss' } },
-      callback: function (result) {
-        if(!result) {
-          $('.bootbox').on('hidden.bs.modal', function (e) {
-            var request_label_id = "#request-label-" + request_id;
-            $(request_label_id).focus();
-          });
-        } else {
-          tossRequest(request_id);
+                warnings.fail(function() {
+                    toss().done(function() {
+                        $('#id_').focus();
+                    });
+                });
+            });
+
+            alerts.fail(function() {
+                $('#id_').focus();
+            });
+
+            alerts.always(function() {
+                setTimeout(function() {
+                    $("#request-fill").prop("disabled", false);
+                }, 1000);
+            });
+        };
+
+        $("#request-fill").click(handleFillButton)
+
+        var delete_ = function(id) {
+            var url = '/delete_request/' + id;
+            var query = $.ajax({ url: url, type: 'DELETE' });
+            query.done(function() {
+                $("#request-" + id).remove();
+            });
+            return query;
+        };
+
+        var getID = function(element) {
+            return element.attr('id').replace('request-', '');
+        };
+
+        var handleDeleteButton = function(e) {
+            e.stopPropagation();
+            $(e.target).prop("disabled", true);
+
+            var id = getID($(e.target).closest('tr.request'));
+            var query = delete_(id);
+            query.fail(function() {
+                setTimeout(function() {
+                    $(e.target).prop("disabled", false);
+                }, 1000);
+            });
+            return query;
         }
-      }
-    });
-  };
 
-  var deleteRequest = function(request_id){
-    var query = $.ajax({ url: '/delete_request/' + request_id, type: 'DELETE' });
-    query.done(function(result){
-      $("#request-" + request_id).remove();
-    });
-    return query;
-  };
+        var toss = function() {
+            var query = add('Tossed');
+            query.done(function(result) {
+                var rendered = result["request"];
+                $("#request-table-header").after(rendered);
+                registerHandlers();
+            });
+            return query;
+        };
 
-  // register request delete buttons
-  var registerDeleteClickHandler = function() {
-    $(".request-delete").click(function(e){
-      e.stopPropagation();
-      $(e.target).prop("disabled", true);
-      var request_id = $(e.target).parents('tr.request')[0].id.replace('request-', '');
-      deleteRequest(request_id)
-      .fail(function(result){
-        setTimeout(function() { $(e.target).prop("disabled", false); }, 1000);
-      });
-    });
-  };
-  registerDeleteClickHandler();
+        var handleTossButton = function(e) {
+            e.stopPropagation();
+            $("#request-toss").prop("disabled", true);
 
-  var tossRequest = function(request_id){
-    var query = $.ajax({url: '/toss_request/' + request_id, type: 'POST' });
-    query.done(function(result){
-      var rendered = result["request"];
-      $("#request-" + request_id).remove();
-      $("#request-table-header").after(rendered);
-      registerClickHandlers();
-      $("#inmate_id").focus();
-    });
-    return query;
-  };
+            var query = toss();
+            query.done(function() {
+                $("#id_").focus();
+            });
+            query.always(function() {
+                setTimeout(function() {
+                    $("#request-toss").prop("disabled", false);
+                }, 1000);
+            });
+            return query;
+        };
 
-  $("#request-fill").click(function(e){
-    // immediately disable button to prevent multiple events
-    e.stopPropagation();
-    $("#request-fill").prop("disabled", true);
+        $("#request-toss").click(handleTossButton);
 
-    fillRequest()
-    .done(function(result){
-      var request_id = result["request_autoid"];
-      checkRequestAlerts(request_id)
-      .done(function(result){
-        if (!result) {
-          checkRequestWarnings(request_id)
-          .done(function(result){
-            if (result) {
-              confirmRequest(request_id, result);
-            }
-          });
-        }
-      });
-    })
-    .always(function(result){
-      setTimeout(function() { $("#request-fill").prop("disabled", false); }, 1000);
-    });
-  });
+        var displayAlerts = function(alerts) {
+            var override = $.Deferred();
+            var buttons = {
+                ok:     { label: 'OK' },
+                cancel: { label: 'Bypass' }
+            };
 
-  $("#request-toss").click(function(e){
-    e.stopPropagation();
-    $("#request-toss").prop("disabled", true);
+            bootbox.confirm({
+                title: "Alert for this Inmate",
+                closeButton: false,
+                message: alerts,
+                buttons: buttons,
+                callback: function(result) {
+                    $('.bootbox').on('hidden.bs.modal', function (e) {
+                        if(result) {
+                            override.reject();
+                        } else {
+                            override.resolve();
+                        }
+                    })
+                }
+            });
 
-    var query = addRequest();
-    query.done(function(result){
-      var request_id = result["request_autoid"];
-      checkRequestAlerts(request_id).done(function(result){
-        if (!result) {
-          tossRequest(request_id);
-        }
-      });
-    });
+            return override;
+        };
 
-    query.always(function(result){
-      setTimeout(function() { $("#request-toss").prop("disabled", false); }, 1000);
-    });
-  });
+        var checkAlerts = function() {
+            var url = '/inmate_alerts/{{ inmate.autoid }}';
+            var query = $.get(url, {}, null, 'html');
+            var alert_ = $.Deferred();
 
-  // label printing methods
-  var getLabel = function(request_id){
-    return $.ajax({ url: '/request_label/' + request_id, type: 'POST' });
-  };
+            query.done(function(result) {
+                if (result) {
+                    var override = displayAlerts(result);
+                    override.then(
+                        function() { alert_.resolve(); },
+                        function() { alert_.reject(); }
+                    );
+                } else {
+                    alert_.resolve();
+                }
+            });
 
-  var registerPrintHandler = function(){
-    $(".request-label-print").click(function(e){
-      e.stopPropagation();
-      $(e.target).prop("disabled", true);
+            return alert_;
+        };
 
-      var request_id = $(e.target).parents('tr.request')[0].id.replace('request-', '');
-      var query = getLabel(request_id);
+        var displayWarnings = function(warnings) {
+            var override = $.Deferred();
+            var buttons = {
+                cancel:  { label: 'Bypass' },
+                confirm: { label: 'OK' }
+            };
 
-      query.done(function(result){
-        try {
-          printLabel(result);
-        } catch(err) {
-          alert(err);
-        }
-      });
+            bootbox.confirm({
+                title: "Request Warnings",
+                closeButton: false,
+                message: warnings,
+                buttons: buttons,
+                callback: function(result) {
+                    $('.bootbox').on('hidden.bs.modal', function (e) {
+                        if (result) {
+                            override.reject();
+                        } else {
+                            override.resolve();
+                        }
+                    });
+                }
+            });
 
-      query.fail(function(result){
-        alert(result.responseText);
-      });
+            return override;
+        };
 
-      query.always(function(result){
-        setTimeout(function() { $(e.target).prop("disabled", false); }, 1000);
-        $("#inmate_id").focus();
-      });
-    });
-  };
+        var checkWarnings = function() {
+            var url = '/request_warnings/{{ inmate.autoid }}';
+            var warning = $.Deferred()
+            var data = {postmarkdate: $('#postmarkdate').val()};
+            var query = $.post(url, data, null, 'html');
 
-  var registerClickHandlers = function() {
-    registerDeleteClickHandler();
-    registerPrintHandler()
-  };
-  registerClickHandlers();
+            query.done(function(result) {
+                if (result) {
+                    var override = displayWarnings(result);
+                    override.then(
+                        function() { warning.resolve() },
+                        function() { warning.reject() }
+                    );
+                } else {
+                    warning.resolve();
+                }
+            });
+
+            return warning;
+        };
+
+        var registerHandlers = function() {
+            $(".request-delete").click(handleDeleteButton);
+        };
+
+        registerHandlers();
+    })();
 
   // datepicker for postmark date
   $('#postmarkdate').datepicker({
