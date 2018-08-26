@@ -1,9 +1,9 @@
 <li class="list-group-item comment" id="comment-{{ comment.autoid }}">
   <div>
-    {% if comment.author and comment.author.name %}
-    <small>{{ comment.datetime.date() }} by <strong>{{ comment.author.name }}</strong></small>
+    {% if comment.author %}
+    <small>{{ comment.datetime.date() }} by <strong>{{ comment.author }}</strong></small>
     {% else %}
-    <small>{{ comment.datetime.date() }} </small>
+    <small>{{ comment.datetime.date() }}</small>
     {% endif %}
     <span class="pull-right">
       <button class="btn btn-default btn-xs comment-delete">

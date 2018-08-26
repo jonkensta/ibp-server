@@ -199,9 +199,9 @@ jQuery(window).ready(function($) {
             return element.attr('id').replace('comment-', '');
         };
 
-        var add = function(comment) {
+        var add = function(comment, author) {
             var url = '/add_comment/{{ inmate.autoid }}';
-            var query = $.post(url, {comment: comment}, null, 'json');
+            var query = $.post(url, {comment: comment, author: author}, null, 'json');
 
             query.done(function(result) {
                 $("#comment-list").prepend(result["comment"]);
@@ -237,7 +237,7 @@ jQuery(window).ready(function($) {
             e.stopPropagation();
             $("#comment-submit").prop("disabled", true);
 
-            var query = add($("#comment").val());
+            var query = add($("#comment").val(), $("#author").val());
 
             query.done(function(result) {
                 $("#comment-fieldset").html(result["fieldset"]);
