@@ -233,7 +233,9 @@ class Generator(object):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="hello, world")
+    """Run label-printer application server"""
+
+    parser = argparse.ArgumentParser(description=main.__doc__)
     subparsers = parser.add_subparsers(title='commands')
 
     print_parser = subparsers.add_parser('print')
