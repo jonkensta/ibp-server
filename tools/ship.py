@@ -227,8 +227,8 @@ def generate_request_ids():
 
 
 def main():
-    desc = "IBP shipping application"
-    parser = argparse.ArgumentParser(description=desc)
+    "IBP shipping application"
+    parser = argparse.ArgumentParser(description=main.__doc__)
 
     parser.add_argument('--url', default='http://localhost:8000')
     parser.add_argument('--apikey')
