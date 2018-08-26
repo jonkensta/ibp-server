@@ -233,7 +233,7 @@ def request_label(autoid):
     return render_template('request_label.xml', request=request)
 
 
-@app.route('/request_info/<int:autoid>', methods=['POST'])
+@app.route('/request_info/<int:autoid>')
 def request_info(autoid):
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
     logger.debug("fetching information for request #%d", autoid)
