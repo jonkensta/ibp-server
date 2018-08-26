@@ -468,8 +468,36 @@ jQuery(window).ready(function($) {
             return warning;
         };
 
+        var info = function(id) {
+            var url = '/request_info/' + id;
+            var query = $.get(url, {}, null, 'json');
+            return query;
+        };
+
+        var printLabel = function(info) {
+            var url = 'http://localhost:40121';
+            var data = {data: JSON.stringify(info)};
+            return $.post(url, data);
+        };
+
+        var handlePrintButton = function(e) {
+            var id = getID($(e.target).closest('tr.request'));
+            info(id).done(function(result) {
+                var printing = printLabel(result);
+
+                printing.done(function() {
+                    $('#id_').focus();
+                });
+
+                printing.fail(function() {
+                    alert('Printing failed: Is print server running?');
+                });
+            });
+        };
+
         var registerHandlers = function() {
             $(".request-delete").click(handleDeleteButton);
+            $(".request-label-print").click(handlePrintButton);
         };
 
         registerHandlers();
