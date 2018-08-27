@@ -322,11 +322,19 @@ def view_unit(autoid):
 
 
 @ibp.csrf.exempt
-@app.route('/request_addresses/<int:autoid>', methods=['POST'])
+@app.route('/return_address', methods=['POST'])
 @ibp.appkey_required
-def request_addresses(autoid):
-    logger.debug("loading request_addresses view for request %d", autoid)
+def return_address():
+    logger.debug("loading return_address view")
+    address = ibp.get_config_section('address')
+    return jsonify(address)
 
+
+@ibp.csrf.exempt
+@app.route('/request_address/<int:autoid>', methods=['POST'])
+@ibp.appkey_required
+def request_address(autoid):
+    logger.debug("loading request_address view for request %d", autoid)
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
 
     inmate = request.inmate
@@ -336,31 +344,45 @@ def request_addresses(autoid):
     if unit is None:
         return "inmate is not assigned to a unit", 400
 
-    inmate_name = "{} {} #{}".format(
-        inmate.first_name.title(),
-        inmate.last_name.title(),
-        inmate.id
+    inmate_name = "{} {} #{:08d}".format(
+        inmate.first_name.title(), inmate.last_name.title(), inmate.id
     )
 
-    from_address = ibp.get_config_section('address')
-    to_address = {
+    return jsonify({
         'name': inmate_name,
         'street1': unit.street1,
         'street2': unit.street2,
         'city': unit.city,
         'state': unit.state,
         'zipcode': unit.zipcode,
-    }
-
-    data = dict(from_address=from_address, to_address=to_address)
-    return jsonify(data)
+    })
 
 
 @ibp.csrf.exempt
-@app.route('/request_addresses/<int:autoid>', methods=['POST'])
+@app.route('/unit_autoids', methods=['POST'])
 @ibp.appkey_required
-def unit_addresses(autoid):
-    logger.debug("loading request_addresses view for request %d", autoid)
+def unit_autoids():
+    logger.debug("loading unit_autoids view")
+    autoids = {unit.name: unit.autoid for unit in models.Unit.query}
+    return jsonify(autoids)
+
+
+@ibp.csrf.exempt
+@app.route('/unit_address/<int:autoid>', methods=['POST'])
+@ibp.appkey_required
+def unit_address(autoid):
+    logger.debug("loading unit_address view for unit %d", autoid)
+    unit = models.Unit.query.filter_by(autoid=autoid).first_or_404()
+    name = ibp.config.get('shipping', 'unit_address_name')
+
+    return jsonify({
+        'name': name,
+        'street1': unit.street1,
+        'street2': unit.street2,
+        'city': unit.city,
+        'state': unit.state,
+        'zipcode': unit.zipcode,
+    })
 
 
 @ibp.csrf.exempt
@@ -368,7 +390,6 @@ def unit_addresses(autoid):
 @ibp.appkey_required
 def ship_request(autoid):
     logger.debug("loading request_addresses view for request %d", autoid)
-
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
 
     inmate = request.inmate

@@ -3,6 +3,7 @@ import json
 import tempfile
 import urlparse
 import argparse
+import contextlib
 import subprocess
 from xml.etree import ElementTree
 
@@ -13,7 +14,7 @@ import usb.core
 import usb.util
 
 
-dazzle_template = jinja2.Template(u"""
+dazzle_template = jinja2.Template(u"""\
 <DAZzle
     Start="PRINTING"
     Prompt="NO"
@@ -21,7 +22,7 @@ dazzle_template = jinja2.Template(u"""
     SkipUnverified="NO"
     Autoclose="YES"
     OutputFile='{{ outfilename }}'
-    Test="NO">
+    Test={{ "YES" if test else "NO" }}>
 
     <Package>
         <MailClass>LIBRARYMAIL</MailClass>
@@ -52,34 +53,67 @@ dazzle_template = jinja2.Template(u"""
             {{ return_['zipcode'] }}
         </ReturnAddress4>
     </Package>
-</DAZzle>
+</DAZzle>\
 """)
 
 try:
     PROGRAM_FILES = os.environ['ProgramW6432']
 except KeyError:
-    DAZZLE = None
+    pass
 else:
-    DAZZLE = os.path.join(PROGRAM_FILES, 'DAZzle', 'DAZZLE.EXE')
+    DAZZLE_DIR = os.path.join(PROGRAM_FILES, 'Envelope Manager', 'DAZzle')
+    DAZZLE = os.path.join(DAZZLE_DIR, 'DAZZLE.EXE')
 
 
-def purchase_and_print_postage(from_, to, weight):
+class PostageError(Exception):
+    pass
 
-    def new_tmpfile():
-        return tempfile.NamedTemporaryFile(suffix='.xml')
 
-    with new_tmpfile() as infile, new_tmpfile() as outfile:
-        xml = dazzle_template.render(
-            to=to, return_=from_, weight=weight, outfilename=outfile.name
-        )
-        infile.write(xml)
-        infile.flush()
+def purchase_and_print_postage(from_, to, weight, test=False):
+
+    @contextlib.contextmanager
+    def xml_tmpfile():
+        with tempfile.NamedTemporaryFile(suffix='.xml', delete=False) as tmp:
+            pass  # just use tempfile to create the file
+        try:
+            yield tmp.name
+        finally:
+            os.remove(tmp.name)
+
+    with xml_tmpfile() as infilename, xml_tmpfile() as outfilename:
+
+        with open(infilename, 'w') as infile:
+            xml = dazzle_template.render(
+                to=to, return_=from_, weight=weight,
+                outfilename=outfilename, test=bool(test)
+            )
+            infile.write(xml)
 
         cmd = [DAZZLE, infile.name]
         subprocess.check_call(cmd)
 
-        e = ElementTree.parse(outfile.name).getroot()
-        return e
+        with open(outfilename) as outfile:
+            e = ElementTree.parse(outfile).getroot()
+            p = e.find('Package')
+
+            status = p.find('status')
+            status = status and status.text or 'Failure'
+
+            if not test and status != 'Success':
+                raise PostageError("failed to purchase postage")
+
+            pic = p.find('PIC')
+            pic = pic and str(pic.text) or None
+
+            amt = p.find('FinalPostage')
+            amt = amt and float(amt.text) or None
+
+            wt = p.find('WeightOz')
+            wt = wt and float(wt.text) or None
+
+            result = dict(tracking_code=pic, amount=amt, weight=wt)
+
+        return result
 
 
 class DymoScale(object):
@@ -202,21 +236,27 @@ class Server(object):
         r.raise_for_status()
         return json.loads(r.text)
 
-    def request_addresses(self, request_id):
-        path = 'request_addresses/{}'.format(request_id)
-        addresses = self._post(path)
-        from_ = addresses['from_address']
-        to = addresses['to_address']
-        return from_, to
+    def unit_autoids(self):
+        return self._post('unit_autoids')
 
-    def ship_request(self, request_id, weight, tracking_code):
+    def return_address(self):
+        return self._post('return_address')
+
+    def unit_address(self, unit_id):
+        return self._post('unit_address/{}'.format(unit_id))
+
+    def request_address(self, request_id):
+        return self._post('request_address/{}'.format(request_id))
+
+    def ship_request(self, request_id, weight, tracking, postage):
         path = 'ship_request/{}'.format(request_id)
-        self._post(path, weight=weight, tracking_code=tracking_code)
+        self._post(path, weight=weight, tracking=tracking, postage=postage)
 
 
 def generate_request_ids():
     while True:
-        request_id = raw_input("Place request on the scale and scan ID: ")  # noqa
+        msg = "Place request on the scale and scan ID: "
+        request_id = raw_input(msg)  # noqa
         try:
             request_id = int(request_id)
         except ValueError:
@@ -227,20 +267,22 @@ def generate_request_ids():
 
 
 def main():
-    "IBP shipping application"
+    """IBP shipping application"""
     parser = argparse.ArgumentParser(description=main.__doc__)
 
-    parser.add_argument('--url', default='http://localhost:8000')
     parser.add_argument('--apikey')
+    parser.add_argument('--url', default='http://localhost:8000')
+    parser.add_argument('--test', action='store_true', default=False)
 
     args = parser.parse_args()
     server = Server(args.url, args.apikey)
+    from_ = server.return_address()
 
     with MockScale() as scale:
         for request_id in generate_request_ids():
-            from_, to = server.request_addresses(request_id)
             weight = scale.sample()
-            e = purchase_and_print_postage(from_, to, weight)
+            to = server.request_address(request_id)
+            e = purchase_and_print_postage(from_, to, weight, test=args.test)
             print(e)
 
 

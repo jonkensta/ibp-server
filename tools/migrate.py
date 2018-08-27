@@ -166,13 +166,13 @@ def comments_length(connection):
 def generate_comments(connection, session):
     sql = """
         SELECT
-            id, datetime, body,
+            id, datetime, body, author,
             inmate_id, inmate_jurisdiction
         FROM comments
-        WHERE body <> '' AND
-              datetime <> "1990-01-01 01:01:01.000000"
+        WHERE body <> '' AND datetime <> "1990-01-01 01:01:01.000000"
     """
     for comment in connection.execute(sql):
+        comment['author'] = comment['author'].strip().title()
         comment['autoid'] = comment.pop('id')
         comment['datetime'] = parse_datetime_or_None(comment['datetime'])
 
