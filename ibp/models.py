@@ -259,10 +259,11 @@ class Shipment(db.Model):
 
     date_shipped = db.Column(db.Date, nullable=False)
 
-    tracking_code = db.Column(db.String)
     tracking_url = db.Column(db.String)
+    tracking_code = db.Column(db.String)
 
     weight = db.Column(db.Float, nullable=False)
+    postage = db.Column(db.Float, nullable=False)
 
     requests = db.relationship(
         'Request', back_populates='shipment'
