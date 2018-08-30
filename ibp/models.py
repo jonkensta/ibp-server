@@ -1,8 +1,6 @@
-import base64
 import httplib2
 import functools
 
-from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 
 import apiclient
