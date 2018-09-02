@@ -30,6 +30,9 @@ else:
         for frequency, duration in zip(frequencies, durations):
             winsound.Beep(frequency, duration)
 
+###################
+# Dazzle Bullshit #
+###################
 
 dazzle_template = jinja2.Template(u"""\
 <DAZzle
@@ -136,6 +139,10 @@ def print_postage(from_, to, weight, test=False):
 
         return result
 
+
+#######################
+# Convenience classes #
+#######################
 
 class DymoScale(object):
 
@@ -281,31 +288,9 @@ class Server(object):
         return self._post('ship_requests', request_ids=request_ids, **shipment)
 
 
-def generate_request_ids(prompt, stop_on_empty=False):
-    prompt = str(prompt)
-    stop_on_empty = bool(stop_on_empty)
-
-    def query_done():
-        return query_yes_no("Done with packages?")
-
-    while True:
-        request_id = raw_input(prompt)  # noqa
-
-        if stop_on_empty and request_id == '' and query_done():
-            raise StopIteration
-
-        try:
-            request_id = int(request_id)
-        except ValueError:
-            print("Invalid request ID")
-            continue
-        else:
-            yield request_id
-
-
-class ConsoleInputError(Exception):
-    pass
-
+#################
+# Input helpers #
+#################
 
 def query_yes_no(question, default="no"):
     valid = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
@@ -326,6 +311,10 @@ def query_yes_no(question, default="no"):
             return valid[choice]
         else:
             print("Please respond with 'yes' or 'no' (or 'y' or 'n').")
+
+
+class ConsoleInputError(Exception):
+    pass
 
 
 def get_unit_from_input(units):
@@ -361,7 +350,38 @@ def get_weight_from_input():
             print("Invalid ounces")
             continue
 
-        return int(16 * pounds + ounces + 1)
+        total_in_ounces = 16 * pounds + ounces
+
+        def round_up(value):
+            return int(value + 1)
+
+        return round_up(total_in_ounces)
+
+
+##############
+# Generators #
+##############
+
+def generate_request_ids(prompt, stop_on_empty=False):
+    prompt = str(prompt)
+    stop_on_empty = bool(stop_on_empty)
+
+    def query_done():
+        return query_yes_no("Done with packages?")
+
+    while True:
+        request_id = raw_input(prompt)  # noqa
+
+        if stop_on_empty and request_id == '' and query_done():
+            raise StopIteration
+
+        try:
+            request_id = int(request_id)
+        except ValueError:
+            print("Invalid request ID")
+            continue
+        else:
+            yield request_id
 
 
 def generate_bulk_shipments(server, units):
@@ -398,6 +418,10 @@ def generate_bulk_shipments(server, units):
         weight = get_weight_from_input()
         yield (units[unit], weight, request_ids)
 
+
+############
+# Commands #
+############
 
 def ship_individual(args):
     server = Server(args.url, args.apikey)
