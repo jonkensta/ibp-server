@@ -22,31 +22,34 @@ db = ibp.db
 session = ibp.db.session
 
 
-def _unique(cls, queryfunc, constructor, arg, kw):
-    with session.no_autoflush:
-        q = session.query(cls)
-        q = queryfunc(*arg, **kw)
-        obj = q.first()
-        if not obj:
-            obj = constructor(*arg, **kw)
-            session.add(obj)
-    return obj
-
-
 class UniqueMixin(object):
 
     @classmethod
-    def unique_filter(cls, *arg, **kw):
-        raise NotImplementedError()
+    def unique_filter(cls, *args, **kwargs):
+        raise NotImplementedError
 
     @classmethod
-    def as_unique(cls, *arg, **kw):
-        return _unique(
-            cls,
-            cls.unique_filter,
-            cls,
-            arg, kw
-        )
+    def as_unique(cls, *args, **kwargs):
+        cache = getattr(session, '_unique_cache', None)
+        if cache is None:
+            session._unique_cache = cache = {}
+
+        key = (cls,) + args
+        if key in cache:
+            return cache[key]
+        else:
+            obj = cls.unique_filter(*args, **kwargs).first()
+            if obj is None:
+                obj = cls(*args, **kwargs)
+                session.add(obj)
+
+            cache[key] = obj
+            return obj
+
+
+@sqlalchemy.event.listens_for(sqlalchemy.orm.Session, 'after_flush')
+def clear_unique_cache(session, ctx):
+    session._unique_cache = {}
 
 
 class ReleaseDate(db.String):
@@ -278,7 +281,7 @@ class Shipment(db.Model):
 
 
 @sqlalchemy.event.listens_for(sqlalchemy.orm.Session, 'after_flush')
-def delete_empty_shipment(session, ctx):
+def delete_empty_shipments(session, ctx):
     query = Shipment.query.filter(~Shipment.requests.any())
     query.delete(synchronize_session=False)
 
