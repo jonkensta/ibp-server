@@ -412,7 +412,7 @@ def ship_requests():
     request_ids = flask.request.form.getlist('request_ids')
 
     if not request_ids:
-        msg = "not request_ids given"
+        msg = "no request_ids specified"
         logger.debug(msg)
         return msg, 400
 
@@ -430,13 +430,19 @@ def ship_requests():
 
     requests = map(get_request_from_autoid, request_ids)
 
+    unit = next(r.unit for r in requests if r.unit is not None)
+
     for request in requests:
         inmate = request.inmate
         inmate.try_fetch_update()
 
-        unit = inmate.unit
-        if unit is None:
+        if inmate.unit is None:
             msg = "inmate %d is not assigned to a unit".format(inmate.autoid)
+            logger.debug(msg)
+            return msg, 400
+
+        if inmate.unit.name != unit.name:
+            msg = "inmates are not all assigned to '{}' unit".format(unit.name)
             logger.debug(msg)
             return msg, 400
 
