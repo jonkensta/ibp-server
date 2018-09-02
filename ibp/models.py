@@ -7,6 +7,7 @@ import apiclient
 import oauth2client.client as oauth2client
 
 import sqlalchemy
+import sqlalchemy.orm
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 
@@ -274,6 +275,12 @@ class Shipment(db.Model):
 
     def __init__(self, **kwargs):
         super(Shipment, self).__init__(**kwargs)
+
+
+@sqlalchemy.event.listens_for(sqlalchemy.orm.Session, 'after_flush')
+def delete_empty_shipment(session, ctx):
+    query = Shipment.query.filter(~Shipment.requests.any())
+    query.delete(synchronize_session=False)
 
 
 class Comment(db.Model):
