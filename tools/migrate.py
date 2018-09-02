@@ -15,7 +15,7 @@ local_dir = os.path.dirname(os.path.realpath(__file__))  # noqa
 os.sys.path.append(os.path.join(local_dir, os.path.pardir))  # noqa
 
 import ibp
-from ibp.models import Unit, Request, Shipment, Inmate, Comment
+from ibp.models import Unit, Request, Inmate, Comment
 
 
 def parse_date(date):
@@ -101,58 +101,6 @@ def generate_requests(connection, session):
         yield Request(**request)
 
 
-def inmates_length(connection):
-    sql = "SELECT COUNT(*) FROM inmates"
-    return connection.execute(sql).fetchone().values()[0]
-
-
-def generate_inmates(connection):
-    sql = "SELECT * FROM inmates order by id ASC"
-    for inmate in connection.execute(sql):
-        unit_name = inmate.pop('unit')
-        unit = Unit.query.filter_by(name=unit_name).first()
-        inmate['unit'] = unit
-
-        inmate.pop('autoid')
-        inmate.pop('date_fetched')
-        inmate.pop('date_last_lookup')
-
-        jurisdiction = inmate.pop('jurisdiction')
-        id_ = inmate.pop('id')
-        id_ = int(id_.replace('-', ''))
-
-        yield Inmate(jurisdiction, id_, **inmate)
-
-
-def shipments_length(connection):
-    sql = "SELECT COUNT(*) FROM packages WHERE date_shipped IS NOT NULL"
-    return connection.execute(sql).fetchone().values()[0]
-
-
-def generate_shipments(connection, session):
-    sql = """
-        SELECT
-            id, weight, date_shipped, unit_shipped_to
-        FROM packages
-        WHERE
-            date_shipped IS NOT NULL AND
-            unit_shipped_to IS NOT NULL AND
-            weight IS NOT NULL
-    """
-    for shipment in connection.execute(sql):
-        date_shipped = shipment.pop('date_shipped')
-        shipment['date_shipped'] = parse_date_or_None(date_shipped)
-
-        request_autoid = shipment.pop('id')
-        request = Request.query.filter_by(autoid=request_autoid).one()
-        shipment['requests'] = [request]
-
-        unit_autoid = shipment.pop('unit_shipped_to')
-        shipment['unit'] = Unit.query.filter_by(autoid=unit_autoid).one()
-
-        yield Shipment(**shipment)
-
-
 def comments_length(connection):
     sql = """
         SELECT COUNT(*)
@@ -212,19 +160,9 @@ def main():
 
             print("Adding units")
             units = generate_units(connection)
-
             progress = ProgressBar(units_length(connection))
             units = progress(units)
-
             session.add_all(units)
-            session.commit()
-
-            print("Adding inmates")
-            inmates = generate_inmates(connection)
-            progress = ProgressBar(inmates_length(connection))
-            inmates = progress(inmates)
-
-            session.add_all(inmates)
             session.commit()
 
             print("Adding comments")
@@ -243,16 +181,8 @@ def main():
             requests = generate_requests(connection, session)
             progress = ProgressBar(requests_length(connection))
             requests = progress(requests)
-
             session.add_all(requests)
             session.commit()
-
-            print("Adding shipments")
-            shipments = generate_shipments(connection, session)
-            progress = ProgressBar(shipments_length(connection))
-            for shipment in progress(shipments):
-                session.add(shipment)
-                session.commit()
 
 
 if __name__ == '__main__':
