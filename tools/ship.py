@@ -1,5 +1,10 @@
+#!/usr/bin/env python
+
+from __future__ import print_function, division
+
 import os
 import json
+import difflib
 import tempfile
 import urlparse
 import argparse
@@ -13,6 +18,18 @@ import requests
 import usb.core
 import usb.util
 
+try:
+    import winsound
+except ImportError:
+    def beep_warning():
+        pass
+else:
+    def beep_warning():
+        frequencies = [2500, 3500, 2500]
+        durations = [0.5, 0.5, 0.5]
+        for frequency, duration in zip(frequencies, durations):
+            winsound.Beep(frequency, duration)
+
 
 dazzle_template = jinja2.Template(u"""\
 <DAZzle
@@ -21,8 +38,8 @@ dazzle_template = jinja2.Template(u"""\
     AbortOnError="YES"
     SkipUnverified="NO"
     Autoclose="YES"
-    OutputFile='{{ outfilename }}'
-    Test={{ "YES" if test else "NO" }}>
+    OutputFile="{{ outfilename }}"
+    Test="{{ "YES" if test else "NO" }}">
 
     <Package>
         <MailClass>LIBRARYMAIL</MailClass>
@@ -35,31 +52,26 @@ dazzle_template = jinja2.Template(u"""\
 
         <ToName>{{ to.name }}</ToName>
         <ToAddress1>{{ to.street1 }}</ToAddress1>
-        {% if to.street2 %}
-            <ToAddress2>{{ to.street2 }}</ToAddress2>
-        {% endif %}
+        {% if to.street2 -%}<ToAddress2>{{ to.street2 }}</ToAddress2>{% endif %}
         <ToCity>{{ to.city }}</ToCity>
         <ToState>{{ to.state }}</ToState>
         <ToPostalCode>{{ to.zipcode }}</ToPostalCode>
 
-        <ReturnAddress1>{{ return_['addressee'] }}</ReturnAddress1>
-        <ReturnAddress2>{{ return_['street1'] }}</ReturnAddress2>
-        {% if 'street2' in return_ %}
-            <ReturnAddress3>{{ return_['street2'] }}</ReturnAddress3>
-        {% endif %}
-        <ReturnAddress4>
-            {{ return_['city'] }},
-            {{ return_['state'] }}
-            {{ return_['zipcode'] }}
-        </ReturnAddress4>
+        <ReturnAddress1>{{ return_.addressee }}</ReturnAddress1>
+        <ReturnAddress2>{{ return_.street1 }}</ReturnAddress2>
+        {% if return_.street2 -%}
+        <ReturnAddress3>{{ return_.street2 }}</ReturnAddress3>
+        {%- else -%}
+        {% endif -%}
+        <ReturnAddress4>{{ return_.city }}, {{ return_.state }} {{ return_.zipcode }}</ReturnAddress4>
     </Package>
 </DAZzle>\
-""")
+""")  # noqa
 
 try:
     PROGRAM_FILES = os.environ['ProgramW6432']
 except KeyError:
-    pass
+    DAZZLE = None
 else:
     DAZZLE_DIR = os.path.join(PROGRAM_FILES, 'Envelope Manager', 'DAZzle')
     DAZZLE = os.path.join(DAZZLE_DIR, 'DAZZLE.EXE')
@@ -69,7 +81,8 @@ class PostageError(Exception):
     pass
 
 
-def purchase_and_print_postage(from_, to, weight, test=False):
+def print_postage(from_, to, weight, test=False):
+    test = bool(test)
 
     @contextlib.contextmanager
     def xml_tmpfile():
@@ -85,40 +98,53 @@ def purchase_and_print_postage(from_, to, weight, test=False):
         with open(infilename, 'w') as infile:
             xml = dazzle_template.render(
                 to=to, return_=from_, weight=weight,
-                outfilename=outfilename, test=bool(test)
+                outfilename=outfilename, test=test
             )
             infile.write(xml)
 
-        cmd = [DAZZLE, infile.name]
-        subprocess.check_call(cmd)
+        if DAZZLE or not test:
+            cmd = [DAZZLE, infile.name]
+            subprocess.check_call(cmd)
+
+        else:
+            with open(outfilename, 'w') as outfile:
+                outfile.write(xml)
 
         with open(outfilename) as outfile:
             e = ElementTree.parse(outfile).getroot()
             p = e.find('Package')
 
-            status = p.find('status')
-            status = status and status.text or 'Failure'
+            state = p.find('status')
+            state = (test and 'Success') or (state and state.text) or 'Failed'
 
-            if not test and status != 'Success':
+            if state != 'Success':
                 raise PostageError("failed to purchase postage")
 
             pic = p.find('PIC')
-            pic = pic and str(pic.text) or None
+            test_pic = "9400100000000000000000"
+            pic = (test and test_pic) or (pic is not None and pic.text)
 
             amt = p.find('FinalPostage')
-            amt = amt and float(amt.text) or None
+            test_amt = "0.0"
+            amt = (test and test_amt) or (amt is not None and amt.text)
 
             wt = p.find('WeightOz')
-            wt = wt and float(wt.text) or None
+            test_wt = "0.0"
+            wt = (test and test_wt) or (wt is not None and wt.text)
 
-            result = dict(tracking_code=pic, amount=amt, weight=wt)
+            result = dict(tracking_code=pic, postage=amt, weight=wt)
 
         return result
 
 
 class DymoScale(object):
 
-    def __init__(self, num_attempts=10, vendor_id=0x0922, product_id=0x8003):
+    # values shamelessly stolen from here:
+    # http://steventsnyder.com/reading-a-dymo-usb-scale-using-python/
+    VENDOR_ID = 0x0922
+    PRODUCT_ID = 0x8003
+
+    def __init__(self, num_attempts=10, vendor_id=VENDOR_ID, product_id=PRODUCT_ID):  # noqa
 
         self._device = usb.core.find(idVendor=vendor_id, idProduct=product_id)
         if self._device is None:
@@ -245,18 +271,29 @@ class Server(object):
     def unit_address(self, unit_id):
         return self._post('unit_address/{}'.format(unit_id))
 
+    def request_destination(self, request_id):
+        return self._post('request_destination/{}'.format(request_id))['name']
+
     def request_address(self, request_id):
         return self._post('request_address/{}'.format(request_id))
 
-    def ship_request(self, request_id, weight, tracking, postage):
-        path = 'ship_request/{}'.format(request_id)
-        self._post(path, weight=weight, tracking=tracking, postage=postage)
+    def ship_requests(self, request_ids, **shipment):
+        return self._post('ship_requests', request_ids=request_ids, **shipment)
 
 
-def generate_request_ids():
+def generate_request_ids(prompt, stop_on_empty=False):
+    prompt = str(prompt)
+    stop_on_empty = bool(stop_on_empty)
+
+    def query_done():
+        return query_yes_no("Done with packages?")
+
     while True:
-        msg = "Place request on the scale and scan ID: "
-        request_id = raw_input(msg)  # noqa
+        request_id = raw_input(prompt)  # noqa
+
+        if stop_on_empty and request_id == '' and query_done():
+            raise StopIteration
+
         try:
             request_id = int(request_id)
         except ValueError:
@@ -264,6 +301,137 @@ def generate_request_ids():
             continue
         else:
             yield request_id
+
+
+class ConsoleInputError(Exception):
+    pass
+
+
+def query_yes_no(question, default="no"):
+    valid = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
+    if default is None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while True:
+        choice = raw_input(question + prompt).lower()  # noqa
+        if default is not None and choice == '':
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            print("Please respond with 'yes' or 'no' (or 'y' or 'n').")
+
+
+def get_unit_from_input(units):
+    unit = raw_input("Enter name of unit and press enter: ").upper()  # noqa
+    num_matches, cutoff = 4, 0.0
+    matches = difflib.get_close_matches(unit, units, num_matches, cutoff)
+
+    for index, match in enumerate(matches, start=1):
+        print("[%d]" % index, ':', match)
+
+    msg = "Choose [1 - %d] corresponding to above: " % num_matches
+    index = raw_input(msg)  # noqa
+
+    try:
+        return matches[int(index) - 1]
+    except (ValueError, IndexError):
+        raise ConsoleInputError
+
+
+def get_weight_from_input():
+    while True:
+        prompt = "Enter weight in format POUNDS.OUNCES: "
+        weight = raw_input(prompt)  # noqa
+        try:
+            weight = float(weight)
+        except ValueError:
+            print("Invalid weight")
+            continue
+
+        pounds = int(weight)
+        ounces = 100 * (weight % 1)
+        if ounces >= 16:
+            print("Invalid ounces")
+            continue
+
+        return int(16 * pounds + ounces + 1)
+
+
+def generate_bulk_shipments(server, units):
+    while True:
+        try:
+            unit = get_unit_from_input(units)
+        except ConsoleInputError:
+            continue
+
+        request_ids = []
+        prompt = "Scan request ID: "
+        for id_ in generate_request_ids(prompt, stop_on_empty=True):
+            try:
+                request_unit = server.request_destination(id_)
+            except requests.exceptions.RequestException:
+                print("Could not find info for request '%d'" % id_)
+                beep_warning()
+                continue
+
+            if request_unit != unit:
+                msg = ("Request '{:d}' destined for unit '{}' not '{}'"
+                       .format(id_, request_unit, unit))
+                print(msg)
+                beep_warning()
+                continue
+
+            else:
+                request_ids.append(id_)
+
+        if not request_ids:
+            print("No requests were selected")
+            continue
+
+        weight = get_weight_from_input()
+        yield (units[unit], weight, request_ids)
+
+
+def ship_individual(args):
+    server = Server(args.url, args.apikey)
+
+    try:
+        from_ = server.return_address()
+    except requests.RequestException:
+        print("Could not connect to server")
+        raise
+
+    with (DymoScale() if not args.test else MockScale()) as scale:
+        prompt = "Place request on the scale and scan ID: "
+        for request_id in generate_request_ids(prompt):
+            weight = scale.sample()
+            to = server.request_address(request_id)
+            postage = print_postage(from_, to, weight, test=args.test)
+            server.ship_requests([request_id], **postage)
+
+
+def ship_bulk(args):
+    server = Server(args.url, args.apikey)
+
+    try:
+        from_ = server.return_address()
+        units = server.unit_autoids()
+    except requests.RequestException:
+        print("Could not connect to server")
+        raise
+
+    for bulk_shipment in generate_bulk_shipments(server, units):
+        unit_autoid, weight, request_ids = bulk_shipment
+        to = server.unit_address(unit_autoid)
+        postage = print_postage(from_, to, weight, test=args.test)
+        server.ship_requests(request_ids, **postage)
 
 
 def main():
@@ -274,16 +442,20 @@ def main():
     parser.add_argument('--url', default='http://localhost:8000')
     parser.add_argument('--test', action='store_true', default=False)
 
-    args = parser.parse_args()
-    server = Server(args.url, args.apikey)
-    from_ = server.return_address()
+    subparsers = parser.add_subparsers()
 
-    with MockScale() as scale:
-        for request_id in generate_request_ids():
-            weight = scale.sample()
-            to = server.request_address(request_id)
-            e = purchase_and_print_postage(from_, to, weight, test=args.test)
-            print(e)
+    parser_individual = subparsers.add_parser(
+        'individual', help="ship individual packages"
+    )
+    parser_individual.set_defaults(ship=ship_individual)
+
+    parser_bulk = subparsers.add_parser(
+        'bulk', help="ship bulk packages"
+    )
+    parser_bulk.set_defaults(ship=ship_bulk)
+
+    args = parser.parse_args()
+    args.ship(args)
 
 
 if __name__ == '__main__':
