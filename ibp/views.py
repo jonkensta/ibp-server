@@ -386,10 +386,10 @@ def unit_address(autoid):
 
 
 @ibp.csrf.exempt
-@app.route('/ship_request/<int:autoid>', methods=['POST'])
+@app.route('/request_destination/<int:autoid>', methods=['POST'])
 @ibp.appkey_required
-def ship_request(autoid):
-    logger.debug("loading request_addresses view for request %d", autoid)
+def request_destination(autoid):
+    logger.debug("loading request_destination view for request %d", autoid)
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
 
     inmate = request.inmate
@@ -401,30 +401,74 @@ def ship_request(autoid):
         logger.debug(msg)
         return msg, 400
 
+    return jsonify(dict(name=unit.name))
+
+
+@ibp.csrf.exempt
+@app.route('/ship_requests', methods=['POST'])
+@ibp.appkey_required
+def ship_requests():
+    logger.debug("loading ship_requests view")
+    request_ids = flask.request.form.getlist('request_ids')
+
+    if not request_ids:
+        msg = "not request_ids given"
+        logger.debug(msg)
+        return msg, 400
+
+    try:
+        request_ids = map(int, request_ids)
+    except ValueError:
+        msg = "invalid request_ids given"
+        logger.debug(msg)
+        return msg, 400
+
+    request_ids = set(request_ids)
+
+    def get_request_from_autoid(autoid):
+        return models.Request.query.filter_by(autoid=autoid).first_or_404()
+
+    requests = map(get_request_from_autoid, request_ids)
+
+    for request in requests:
+        inmate = request.inmate
+        inmate.try_fetch_update()
+
+        unit = inmate.unit
+        if unit is None:
+            msg = "inmate %d is not assigned to a unit".format(inmate.autoid)
+            logger.debug(msg)
+            return msg, 400
+
     weight = flask.request.form.get('weight', type=float)
     if weight is None:
         msg = "given weight '{}' is invalid".format(weight)
         logger.debug(msg)
         return msg, 400
 
-    tracking_code = flask.request.form.get('tracking_code')
+    postage = flask.request.form.get('postage', type=float)
+    if postage is None:
+        msg = "given postage '{}' is invalid".format(postage)
+        logger.debug(msg)
+        return msg, 400
+
+    tracking = flask.request.form.get('tracking_code')
+    if tracking is None:
+        msg = "given tracking code '{}' is invalid".format(tracking)
+        logger.debug(msg)
+        return msg, 400
 
     shipment = models.Shipment(
-        weight=weight,
-        requests=[request],
-        date_shipped=date.today(),
-        unit=inmate.unit,
-        tracking_code=tracking_code
+        requests=requests, date_shipped=date.today(), unit=inmate.unit,
+        weight=weight, postage=postage, tracking_code=tracking,
     )
     session.add(shipment)
     session.commit()
 
-    msg = (
-        "created {:.1f} ounce(s) shipment {} for request {}"
-        .format(weight, shipment.autoid, request.autoid)
+    logger.debug(
+        "created %.1f ounce(s) shipment %s", weight, shipment.autoid
     )
-    logger.debug(msg)
-    return msg
+    return jsonify(dict())
 
 
 @app.route('/login/google')
