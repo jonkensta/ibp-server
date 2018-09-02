@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import os
 import tempfile
 import argparse
@@ -76,9 +78,6 @@ def generate_requests(connection, session):
         'Shipped': 'Filled',
     }
 
-    def map_action(action):
-        return action_map[action]
-
     for request in connection.execute(sql):
         request['autoid'] = request.pop('id')
 
@@ -91,7 +90,7 @@ def generate_requests(connection, session):
         else:
             request['date_processed'] = parse_date_or_None(date_postmarked)
 
-        request['action'] = map_action(request['action'])
+        request['action'] = action_map.get(request['action'])
 
         inmate_id = request.pop('inmate_id')
         inmate_id = int(inmate_id.replace('-', ''))
@@ -108,12 +107,13 @@ def inmates_length(connection):
 
 
 def generate_inmates(connection):
-    sql = "SELECT * FROM inmates"
+    sql = "SELECT * FROM inmates order by id ASC"
     for inmate in connection.execute(sql):
         unit_name = inmate.pop('unit')
         unit = Unit.query.filter_by(name=unit_name).first()
         inmate['unit'] = unit
 
+        inmate.pop('autoid')
         inmate.pop('date_fetched')
         inmate.pop('date_last_lookup')
 
@@ -210,19 +210,6 @@ def main():
         with ibp.app.app_context():
             session = ibp.db.session
 
-            print("Adding comments")
-            comments = generate_comments(connection, session)
-            progress = ProgressBar(comments_length(connection))
-            comments = progress(comments)
-
-            if args.edit_comments:
-                comments = itertools.imap(edit_comment, comments)
-                comments = itertools.ifilter(None, comments)
-
-            for comment in comments:
-                session.add(comment)
-                session.commit()
-
             print("Adding units")
             units = generate_units(connection)
 
@@ -235,16 +222,30 @@ def main():
             print("Adding inmates")
             inmates = generate_inmates(connection)
             progress = ProgressBar(inmates_length(connection))
-            for inmate in progress(inmates):
-                session.add(inmate)
-                session.commit()
+            inmates = progress(inmates)
+
+            session.add_all(inmates)
+            session.commit()
+
+            print("Adding comments")
+            comments = generate_comments(connection, session)
+            progress = ProgressBar(comments_length(connection))
+            comments = progress(comments)
+
+            if args.edit_comments:
+                comments = itertools.imap(edit_comment, comments)
+                comments = itertools.ifilter(None, comments)
+
+            session.add_all(comments)
+            session.commit()
 
             print("Adding requests")
             requests = generate_requests(connection, session)
             progress = ProgressBar(requests_length(connection))
-            for request in progress(requests):
-                session.add(request)
-                session.commit()
+            requests = progress(requests)
+
+            session.add_all(requests)
+            session.commit()
 
             print("Adding shipments")
             shipments = generate_shipments(connection, session)
