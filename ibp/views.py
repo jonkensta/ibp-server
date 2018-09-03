@@ -414,7 +414,6 @@ def ship_requests():
     form.csrf_token.data = form.csrf_token.current_token
 
     if not form.validate():
-        print(form.errors)
         return "form data invalid", 400
 
     request_ids = set(form.request_ids.data)
