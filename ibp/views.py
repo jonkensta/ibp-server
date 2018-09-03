@@ -167,9 +167,9 @@ def inmate_alerts(autoid):
     template = """
         The following people have set an alert for this inmate:
         <ul>
-            {% for alert in alerts %}
+            {% for alert in alerts -%}
             <li>{{ alert.requester }}</li>
-            {% endfor %}
+            {%- endfor %}
         </ul>
         Please write their name(s) on this letter and set it aside for them.
         They have been alerted that this letter was received, and
