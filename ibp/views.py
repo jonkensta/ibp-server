@@ -409,35 +409,28 @@ def request_destination(autoid):
 @ibp.appkey_required
 def ship_requests():
     logger.debug("loading ship_requests view")
-    request_ids = flask.request.form.getlist('request_ids')
 
-    if not request_ids:
-        msg = "no request_ids specified"
-        logger.debug(msg)
-        return msg, 400
+    form = flask_forms.Shipment(data=flask.request.form)
+    form.csrf_token.data = form.csrf_token.current_token
 
-    try:
-        request_ids = map(int, request_ids)
-    except ValueError:
-        msg = "invalid request_ids given"
-        logger.debug(msg)
-        return msg, 400
+    if not form.validate():
+        print(form.errors)
+        return "form data invalid", 400
 
-    request_ids = set(request_ids)
+    request_ids = set(form.request_ids.data)
 
     def get_request_from_autoid(autoid):
         return models.Request.query.filter_by(autoid=autoid).first_or_404()
 
     requests = map(get_request_from_autoid, request_ids)
-
-    unit = next(r.unit for r in requests if r.unit is not None)
+    unit = next(r.inmate.unit for r in requests if r.inmate.unit is not None)
 
     for request in requests:
         inmate = request.inmate
         inmate.try_fetch_update()
 
         if inmate.unit is None:
-            msg = "inmate %d is not assigned to a unit".format(inmate.autoid)
+            msg = "inmate for request %d is unassigned".format(request.autoid)
             logger.debug(msg)
             return msg, 400
 
@@ -446,33 +439,16 @@ def ship_requests():
             logger.debug(msg)
             return msg, 400
 
-    weight = flask.request.form.get('weight', type=float)
-    if weight is None:
-        msg = "given weight '{}' is invalid".format(weight)
-        logger.debug(msg)
-        return msg, 400
-
-    postage = flask.request.form.get('postage', type=float)
-    if postage is None:
-        msg = "given postage '{}' is invalid".format(postage)
-        logger.debug(msg)
-        return msg, 400
-
-    tracking = flask.request.form.get('tracking_code')
-    if tracking is None:
-        msg = "given tracking code '{}' is invalid".format(tracking)
-        logger.debug(msg)
-        return msg, 400
-
     shipment = models.Shipment(
-        requests=requests, date_shipped=date.today(), unit=inmate.unit,
-        weight=weight, postage=postage, tracking_code=tracking,
+        requests=requests, date_shipped=date.today(), unit=unit,
+        weight=form.weight.data, postage=form.postage.data,
+        tracking_code=form.tracking_code.data,
     )
     session.add(shipment)
     session.commit()
 
     logger.debug(
-        "created %.1f ounce(s) shipment %s", weight, shipment.autoid
+        "created %d ounce(s) shipment %d", form.weight.data, shipment.autoid
     )
     return jsonify(dict())
 

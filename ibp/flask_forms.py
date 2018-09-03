@@ -1,3 +1,5 @@
+import decimal
+
 from flask_wtf import FlaskForm
 from wtforms import fields, validators
 
@@ -110,4 +112,20 @@ class Comment(FlaskForm):
                 message="Please input a message under 60 characters."
             )
         ]
+    )
+
+
+class Shipment(FlaskForm):
+    request_ids = fields.FieldList(
+        fields.IntegerField('request_ids', [validators.InputRequired()]),
+        min_entries=1
+    )
+    tracking_code = fields.StringField(
+        'weight', [validators.InputRequired()],
+    )
+    weight = fields.IntegerField(
+        'weight', [validators.InputRequired()],
+    )
+    postage = fields.IntegerField(
+        'postage', [validators.InputRequired()],
     )

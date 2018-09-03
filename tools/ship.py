@@ -125,15 +125,14 @@ def print_postage(from_, to, weight, test=False):
 
             pic = p.find('PIC')
             test_pic = "9400100000000000000000"
-            pic = (test and test_pic) or (pic is not None and pic.text)
+            pic = test_pic if test else (pic.text if pic else None)
 
             amt = p.find('FinalPostage')
-            test_amt = "0.0"
-            amt = (test and test_amt) or (amt is not None and amt.text)
+            amt = 0 if test else (float(amt.text) if amt else None)
+            amt = int(round(100 * amt))
 
             wt = p.find('WeightOz')
-            test_wt = "0.0"
-            wt = (test and test_wt) or (wt is not None and wt.text)
+            wt = 0 if test else (int(wt.text) if wt else None)
 
             result = dict(tracking_code=pic, postage=amt, weight=wt)
 
@@ -285,7 +284,10 @@ class Server(object):
         return self._post('request_address/{}'.format(request_id))
 
     def ship_requests(self, request_ids, **shipment):
-        return self._post('ship_requests', request_ids=request_ids, **shipment)
+        shipment = dict(shipment)
+        ids = {"request_ids-%d" % k: v for k, v in enumerate(request_ids)}
+        shipment.update(ids)
+        return self._post('ship_requests', **shipment)
 
 
 #################
@@ -416,7 +418,7 @@ def generate_bulk_shipments(server, units):
             continue
 
         weight = get_weight_from_input()
-        yield (units[unit], weight, request_ids)
+        yield (units[unit], weight, set(request_ids))
 
 
 ############

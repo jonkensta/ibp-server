@@ -264,8 +264,8 @@ class Shipment(db.Model):
     tracking_url = db.Column(db.String)
     tracking_code = db.Column(db.String)
 
-    weight = db.Column(db.Float, nullable=False)
-    postage = db.Column(db.Float, nullable=False)
+    weight = db.Column(db.Integer, nullable=False)
+    postage = db.Column(db.Integer, nullable=False)  # postage in cents
 
     requests = db.relationship(
         'Request', back_populates='shipment'
