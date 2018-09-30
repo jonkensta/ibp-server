@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import json
+import time
 import argparse
 import tempfile
 import threading
@@ -134,7 +135,21 @@ def render(label):
     return image
 
 
+class PrintFailed(Exception):
+    pass
+
+
 class Printer(object):
+
+    _job_states = {
+        3: 'pending',
+        4: 'pending-held',
+        5: 'processing',
+        6: 'processing-stopped',
+        7: 'canceled',
+        8: 'aborted',
+        9: 'completed',
+    }
 
     def __init__(self):
         self._conn = cups.Connection()
@@ -162,14 +177,37 @@ class Printer(object):
         for printer in printers:
             yield printer
 
+    def _try_print_file_on_printer(self, name, printer, poll_period=0.25):
+        try:
+            job_id = self._conn.printFile(printer, name, name, dict())
+        except cups.IPPError:
+            raise PrintFailed
+
+        def get_job_state(id_):
+            job_state_enum = self._conn.getJobAttributes(id_)['job-state']
+            return Printer._jobs_states[job_state_enum]
+
+        def job_is_pending(id_):
+            return (get_job_state(id_) in {'pending', 'processing'})
+
+        def job_succeeded(id_):
+            return (get_job_state(id_) == 'completed')
+
+        while job_is_pending(job_id):
+            time.sleep(float(poll_period))
+
+        if not job_succeeded(job_id):
+            raise PrintFailed
+
     def _print_file(self, name):
         for printer in self._printers:
             try:
-                self._conn.printFile(printer, name, name, dict())
-            except cups.IPPError:
+                self._try_print_file_on_printer(name, printer)
+            except PrintFailed:
                 continue
             else:
                 self._last_printer = printer
+                break
 
     def print_label(self, label):
         rendered = render(label)
