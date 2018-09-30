@@ -8,6 +8,7 @@ import difflib
 import tempfile
 import urlparse
 import argparse
+import traceback
 import contextlib
 import subprocess
 from xml.etree import ElementTree
@@ -17,18 +18,6 @@ import requests
 
 import usb.core
 import usb.util
-
-try:
-    import winsound
-except ImportError:
-    def beep_warning():
-        pass
-else:
-    def beep_warning():
-        frequencies = [2500, 3500, 2500]
-        durations = [0.5, 0.5, 0.5]
-        for frequency, duration in zip(frequencies, durations):
-            winsound.Beep(frequency, duration)
 
 ###################
 # Dazzle Bullshit #
@@ -117,22 +106,27 @@ def print_postage(from_, to, weight, test=False):
             e = ElementTree.parse(outfile).getroot()
             p = e.find('Package')
 
-            state = p.find('status')
-            state = (test and 'Success') or (state and state.text) or 'Failed'
+            if test:
+                pic = '9400100000000000000000'
+                return dict(tracking_code=pic, postage=0, weight=0)
+
+            state = p.find('Status')
+            state = state.text if state is not None else "Unknown State"
 
             if state != 'Success':
-                raise PostageError("failed to purchase postage")
+                raise PostageError("failed to purchase postage: " + str(state))
 
             pic = p.find('PIC')
-            test_pic = "9400100000000000000000"
-            pic = test_pic if test else (pic.text if pic else None)
+            if pic is not None:
+                pic = pic.text
 
             amt = p.find('FinalPostage')
-            amt = 0 if test else (float(amt.text) if amt else None)
-            amt = int(round(100 * amt))
+            if amt is not None:
+                amt = int(round(100 * float(amt.text)))
 
             wt = p.find('WeightOz')
-            wt = 0 if test else (int(wt.text) if wt else None)
+            if wt is not None:
+                wt = int(round(float(wt.text)))
 
             result = dict(tracking_code=pic, postage=amt, weight=wt)
 
@@ -142,118 +136,6 @@ def print_postage(from_, to, weight, test=False):
 #######################
 # Convenience classes #
 #######################
-
-class DymoScale(object):
-
-    # values shamelessly stolen from here:
-    # http://steventsnyder.com/reading-a-dymo-usb-scale-using-python/
-    VENDOR_ID = 0x0922
-    PRODUCT_ID = 0x8003
-
-    def __init__(self, num_attempts=10, vendor_id=VENDOR_ID, product_id=PRODUCT_ID):  # noqa
-
-        self._device = usb.core.find(idVendor=vendor_id, idProduct=product_id)
-        if self._device is None:
-            msg = "Dymo scale not turned on or plugged in?"
-            raise ValueError(msg)
-
-        self._num_attempts = int(num_attempts)
-
-    @staticmethod
-    def _grams_to_ounces(grams):
-        FACTOR = 0.035274
-        ounces = grams * FACTOR
-        return round(ounces, ndigits=1)
-
-    @staticmethod
-    def _data_to_weight(data):
-        GRAMS_MODE = 2
-        OUNCES_MODE = 11
-
-        raw_weight = data[4] + data[5] * 256
-
-        if data[2] == OUNCES_MODE:
-            ounces = raw_weight * 0.1
-        elif data[2] == GRAMS_MODE:
-            ounces = DymoScale._grams_to_ounces(raw_weight)
-        else:
-            ounces = None
-
-        return ounces
-
-    def _read(self):
-        endpoint = self._device[0][(0, 0)][0]
-        address = endpoint.bEndpointAddress
-        size = endpoint.wMaxPacketSize
-
-        last_exception = None
-        for _ in range(self._num_attempts):
-            try:
-                data = self._device.read(address, size)
-            except usb.core.USBError as e:
-                last_exception = e
-            else:
-                return DymoScale._data_to_weight(data)
-
-        raise last_exception
-
-    def sample(self, stability_count=2):
-        """Return instantaneous weight in ounces."""
-
-        raw = None
-        last_raw = None
-
-        default_count = int(stability_count)
-        count = default_count
-
-        while count > 0:
-            raw = self._read()
-            if last_raw is None or raw != last_raw:  # precise to +/- 2g
-                count = default_count
-                last_raw = raw
-            else:
-                count -= 1
-
-        return raw
-
-    def configure(self):
-        try:
-            if self._device.is_kernel_driver_active(0):
-                self._reattach = True
-                self._device.detach_kernel_driver(0)
-        except Exception:
-            self._reattach = False
-
-        self._device.set_configuration()
-
-    def close(self):
-        if self._reattach:
-            try:
-                self._device.attach_kernel_driver(0)
-            except Exception:
-                pass
-
-        usb.util.dispose_resources(self._device)
-
-    def __enter__(self):
-        self.configure()
-        return self
-
-    def __exit__(self, *args):
-        self.close()
-
-
-class MockScale(object):
-
-    def sample(self):
-        return 32.0
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        pass
-
 
 class Server(object):
 
@@ -338,26 +220,16 @@ def get_unit_from_input(units):
 
 def get_weight_from_input():
     while True:
-        prompt = "Enter weight in format POUNDS.OUNCES: "
-        weight = raw_input(prompt)  # noqa
+        prompt = "Enter weight in pounds: "
+        pounds = raw_input(prompt)  # noqa
         try:
-            weight = float(weight)
+            pounds = int(pounds)
         except ValueError:
             print("Invalid weight")
-            continue
+            raise ConsoleInputError
 
-        pounds = int(weight)
-        ounces = 100 * (weight % 1)
-        if ounces >= 16:
-            print("Invalid ounces")
-            continue
-
-        total_in_ounces = 16 * pounds + ounces
-
-        def round_up(value):
-            return int(value + 1)
-
-        return round_up(total_in_ounces)
+        total_in_ounces = 16 * pounds
+        return total_in_ounces
 
 
 ##############
@@ -388,37 +260,23 @@ def generate_request_ids(prompt, stop_on_empty=False):
 
 def generate_bulk_shipments(server, units):
     while True:
-        try:
-            unit = get_unit_from_input(units)
-        except ConsoleInputError:
-            continue
-
-        request_ids = []
-        prompt = "Scan request ID: "
-        for id_ in generate_request_ids(prompt, stop_on_empty=True):
+        while True:
             try:
-                request_unit = server.request_destination(id_)
-            except requests.exceptions.RequestException:
-                print("Could not find info for request '%d'" % id_)
-                beep_warning()
+                unit = get_unit_from_input(units)
+            except ConsoleInputError:
                 continue
-
-            if request_unit != unit:
-                msg = ("Request '{:d}' destined for unit '{}' not '{}'"
-                       .format(id_, request_unit, unit))
-                print(msg)
-                beep_warning()
-                continue
-
             else:
-                request_ids.append(id_)
+                break
 
-        if not request_ids:
-            print("No requests were selected")
-            continue
+        while True:
+            try:
+                weight = get_weight_from_input()
+            except ConsoleInputError:
+                continue
+            else:
+                break
 
-        weight = get_weight_from_input()
-        yield (units[unit], weight, set(request_ids))
+        yield (units[unit], weight)
 
 
 ############
@@ -434,13 +292,16 @@ def ship_individual(args):
         print("Could not connect to server")
         raise
 
-    with (DymoScale() if not args.test else MockScale()) as scale:
-        prompt = "Place request on the scale and scan ID: "
-        for request_id in generate_request_ids(prompt):
-            weight = scale.sample()
-            to = server.request_address(request_id)
-            postage = print_postage(from_, to, weight, test=args.test)
-            server.ship_requests([request_id], **postage)
+    prompt = "Place request on the scale and scan ID: "
+    for request_id in generate_request_ids(prompt):
+        try:
+            weight = get_weight_from_input()
+        except ConsoleInputError:
+            continue
+
+        to = server.request_address(request_id)
+        postage = print_postage(from_, to, weight, test=args.test)
+        server.ship_requests([request_id], **postage)
 
 
 def ship_bulk(args):
@@ -453,11 +314,11 @@ def ship_bulk(args):
         print("Could not connect to server")
         raise
 
-    for bulk_shipment in generate_bulk_shipments(server, units):
-        unit_autoid, weight, request_ids = bulk_shipment
+    for unit_autoid, weight in generate_bulk_shipments(server, units):
         to = server.unit_address(unit_autoid)
         postage = print_postage(from_, to, weight, test=args.test)
-        server.ship_requests(request_ids, **postage)
+        postage['unit_autoid'] = unit_autoid
+        server.ship_requests([], **postage)
 
 
 def main():
@@ -481,7 +342,13 @@ def main():
     parser_bulk.set_defaults(ship=ship_bulk)
 
     args = parser.parse_args()
-    args.ship(args)
+
+    try:
+        args.ship(args)
+    except Exception as exc:
+        print("Error: " + str(exc))
+        traceback.print_exc()
+        raw_input("Hit any key to close")  # noqa
 
 
 if __name__ == '__main__':
