@@ -16,9 +16,6 @@ from xml.etree import ElementTree
 import jinja2
 import requests
 
-import usb.core
-import usb.util
-
 ###################
 # Dazzle Bullshit #
 ###################
