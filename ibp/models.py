@@ -36,7 +36,8 @@ class UniqueMixin(object):
 
         key = (cls,) + args
         if key in cache:
-            return cache[key]
+            obj = cache[key]
+
         else:
             obj = cls.unique_filter(*args, **kwargs).first()
             if obj is None:
@@ -44,7 +45,13 @@ class UniqueMixin(object):
                 session.add(obj)
 
             cache[key] = obj
-            return obj
+
+        try:
+            session.add(obj)
+        except sqlalchemy.exc.InvalidRequestError:
+            pass
+
+        return obj
 
 
 @sqlalchemy.event.listens_for(sqlalchemy.orm.Session, 'after_flush')
