@@ -3,6 +3,7 @@ import functools
 from datetime import timedelta
 
 import logging
+from logging.handlers import RotatingFileHandler
 
 from ConfigParser import SafeConfigParser
 
@@ -28,7 +29,8 @@ config.read(config_fpath)
 
 # configure logging
 log = logging.getLogger()
-log.setLevel(config.get('logging', 'level'))
+log_level = logging.getLevelName(config.get('logging', 'level'))
+log.setLevel(log_level)
 
 logging.getLogger('urllib3').setLevel(logging.ERROR)
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
@@ -42,6 +44,14 @@ log_formatter = logging.Formatter(config.get('logging', 'format', raw=True))
 log_handler = logging.StreamHandler()
 log_handler.setFormatter(log_formatter)
 log.addHandler(log_handler)
+
+log_file_handler = RotatingFileHandler(
+    config.get('logging', 'logfile'),
+    maxBytes=config.getint('logging', 'rotation_size')
+)
+log_file_handler.setFormatter(log_formatter)
+log_file_handler.setLevel(log_level)
+log.addHandler(log_file_handler)
 
 
 class RotatingStream(object):
@@ -70,7 +80,11 @@ log.addHandler(log_handler)
 
 # setup flask application
 app = Flask(__name__)
-app.logger.setLevel(config.get('logging', 'level'))
+app.logger.setLevel(log_level)
+app.logger.addHandler(log_file_handler)
+app.logger.addHandler(log_handler)
+
+log.info("Starting IBP Application")
 
 database_fpath = os.path.join(root_dir, config.get('database', 'database'))
 database_fpath = os.path.abspath(database_fpath)
