@@ -15,7 +15,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 config = SafeConfigParser()
 
-flask_env = os.getenv('FLASK_ENV', 'development')
+flask_env = os.getenv('FLASK_ENV', 'production')
 if flask_env == 'production':
     config_fname = 'production.conf'
 else:
