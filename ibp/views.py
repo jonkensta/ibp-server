@@ -422,7 +422,15 @@ def ship_requests():
         return models.Request.query.filter_by(autoid=autoid).first_or_404()
 
     requests = map(get_request_from_autoid, request_ids)
-    unit = next(r.inmate.unit for r in requests if r.inmate.unit is not None)
+
+    unit_autoid = form.unit_autoid.data
+    if unit_autoid:
+        unit = models.Unit.query.filter_by(autoid=unit_autoid).first_or_404()
+    elif requests:
+        unit = requests[0].inmate.unit
+    else:
+        msg = "Either unit name or or one request ID must be given"
+        return msg, 400
 
     for request in requests:
         inmate = request.inmate

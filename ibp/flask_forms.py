@@ -118,10 +118,13 @@ class Comment(FlaskForm):
 class Shipment(FlaskForm):
     request_ids = fields.FieldList(
         fields.IntegerField('request_ids', [validators.InputRequired()]),
-        min_entries=1
+        min_entries=0
+    )
+    unit_autoid = fields.IntegerField(
+        'unit_autoid', [validators.Optional()],
     )
     tracking_code = fields.StringField(
-        'weight', [validators.InputRequired()],
+        'tracking_code', [validators.InputRequired()],
     )
     weight = fields.IntegerField(
         'weight', [validators.InputRequired()],

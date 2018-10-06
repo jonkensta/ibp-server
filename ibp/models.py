@@ -287,10 +287,11 @@ class Shipment(db.Model):
         super(Shipment, self).__init__(**kwargs)
 
 
-@sqlalchemy.event.listens_for(sqlalchemy.orm.Session, 'after_flush')
-def delete_empty_shipments(session, ctx):
-    query = Shipment.query.filter(~Shipment.requests.any())
-    query.delete(synchronize_session=False)
+if False:
+    @sqlalchemy.event.listens_for(sqlalchemy.orm.Session, 'after_flush')
+    def delete_empty_shipments(session, ctx):
+        query = Shipment.query.filter(~Shipment.requests.any())
+        query.delete(synchronize_session=False)
 
 
 class Comment(db.Model):
