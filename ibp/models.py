@@ -203,7 +203,10 @@ class Inmate(db.Model, UniqueMixin):
             self = Inmate.query_by_autoid(self.autoid).first()
 
     def update_from_response(self, **kwargs):
-        self.unit = Unit.query.filter_by(name=kwargs.get('unit')).first()
+
+        unit_name = kwargs.get('unit') or ''
+        if self.unit.name != unit_name:
+            self.unit = Unit.query.filter_by(name=unit_name).first()
 
         self.first_name = kwargs['first_name']
         self.last_name = kwargs['last_name']
