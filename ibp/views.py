@@ -339,6 +339,7 @@ def request_address(autoid):
 
     inmate = request.inmate
     inmate.try_fetch_update()
+    session.add(inmate)
 
     unit = inmate.unit
     if unit is None:
