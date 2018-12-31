@@ -5,11 +5,13 @@ import time
 import argparse
 import tempfile
 import threading
+import itertools
 import http.server
 from queue import Queue
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlparse
 
 import cups
+import pyudev
 import barcode
 from barcode.writer import ImageWriter
 from PIL import Image, ImageDraw, ImageFont
@@ -153,13 +155,10 @@ class Printer(object):
 
     def __init__(self):
         self._conn = cups.Connection()
-        self._last_printer = None
+        self._context = pyudev.Context()
 
     @property
     def _printers(self):
-        if self._last_printer is not None:
-            yield self._last_printer
-
         attributes = self._conn.getPrinters()
         printers = attributes.keys()
 
@@ -169,10 +168,26 @@ class Printer(object):
 
         printers = filter(is_label_printer, printers)
 
-        def is_not_last_printer(printer):
-            return self._last_printer is None or printer != self._last_printer
+        plugged_in_printers = itertools.chain(
+            self._context.list_devices(ID_MODEL='DYMO_LabelWriter_450'),
+            self._context.list_devices(ID_MODEL='DYMO_LabelWriter_450_Turbo'),
+        )
 
-        printers = filter(is_not_last_printer, printers)
+        plugged_in_serials = [
+            p.properties.get('ID_SERIAL_SHORT', '')
+            for p in plugged_in_printers
+        ]
+
+        def is_plugged_in(printer):
+
+            def get_serial_number(printer):
+                uri = attributes[printer].get('device-uri', '')
+                query = parse_qs(urlparse(uri).query)
+                return query.get('serial', [''])[0]
+
+            return get_serial_number(printer) in plugged_in_serials
+
+        printers = filter(is_plugged_in, printers)
 
         for printer in printers:
             yield printer
@@ -206,7 +221,6 @@ class Printer(object):
             except PrintFailed:
                 continue
             else:
-                self._last_printer = printer
                 break
 
     def print_label(self, label):
