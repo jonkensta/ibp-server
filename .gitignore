@@ -1,6 +1,7 @@
 instance
 *.pyc
 __pycache__
+**.mypy_cache
 venv
 *.swp
 *.swo
