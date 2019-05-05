@@ -14,10 +14,16 @@
         <div class="panel-body">
           <dl class="dl-horizontal">
             <dt>Name:</dt>
-            {% if inmate.url %}
-            <dd><a href='{{ inmate.url }}'>{{ inmate.first_name + ' ' + inmate.last_name }}</a></dd>
+            {% if inmate.first_name or inmate.last_name %}
+                {% with fullname = (inmate.first_name or '') + ' ' + (inmate.last_name or '') %}
+                    {% if inmate.url %}
+                    <dd><a href='{{ inmate.url }}'>{{ fullname }}</a></dd>
+                    {% else %}
+                    <dd>{{ fullname }}</dd>
+                    {% endif %}
+                {% endwith %}
             {% else %}
-            <dd>{{ inmate.first_name + ' ' + inmate.last_name }}</dd>
+            <dd>Not Available</dd>
             {% endif %}
 
             <dt>Unit:</dt>
