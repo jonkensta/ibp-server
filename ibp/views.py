@@ -338,12 +338,14 @@ def request_address(autoid):
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
 
     inmate = request.inmate
-    inmate.try_fetch_update()
     session.add(inmate)
+    inmate.try_fetch_update()
 
     unit = inmate.unit
     if unit is None:
         return "inmate is not assigned to a unit", 400
+
+    session.add(unit)
 
     inmate_name = "{} {} #{:08d}".format(
         inmate.first_name.title(), inmate.last_name.title(), inmate.id
