@@ -1,9 +1,5 @@
 alembic
-BeautifulSoup4
 Flask
-Flask-Bootstrap
 Flask-SQLAlchemy
-Jinja2
-nameparser
-requests
 SQLAlchemy
+git+git://github.com/jonkensta/inmate-providers@master#egg=pymates

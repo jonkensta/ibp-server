@@ -7,10 +7,12 @@ import sqlalchemy.orm
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 
+import pymates
+
 import ibp
 
-db = ibp.db
-session = ibp.db.session
+db = ibp.DB
+session = db.session
 
 class UniqueMixin(object):
 
@@ -125,8 +127,8 @@ class Inmate(db.Model, UniqueMixin):
         if inmate is None or inmate.entry_is_fresh():
             return cls.query.filter_by(autoid=autoid)
 
-        timeout = ibp.config.getfloat('providers', 'timeout')
-        inmates, _ = providers.query_by_inmate_id(
+        timeout = ibp.CONFIG.getfloat('providers', 'timeout')
+        inmates, _ = pymates.query_by_inmate_id(
             inmate.id, jurisdictions=[inmate.jurisdiction], timeout=timeout
         )
         inmates = map(cls.from_response, inmates)
@@ -138,7 +140,7 @@ class Inmate(db.Model, UniqueMixin):
 
     @classmethod
     def query_by_inmate_id(cls, id_):
-        inmates, errors = providers.query_by_inmate_id(id_)
+        inmates, errors = pymates.query_by_inmate_id(id_)
         inmates = map(Inmate.from_response, inmates)
 
         session.add_all(inmates)
@@ -149,8 +151,8 @@ class Inmate(db.Model, UniqueMixin):
 
     @classmethod
     def query_by_name(cls, first_name, last_name):
-        timeout = ibp.config.getfloat('providers', 'timeout')
-        inmates, errors = providers.query_by_name(
+        timeout = ibp.CONFIG.getfloat('providers', 'timeout')
+        inmates, errors = pymates.query_by_name(
             first_name, last_name, timeout=timeout
         )
         inmates = map(Inmate.from_response, inmates)
@@ -184,7 +186,7 @@ class Inmate(db.Model, UniqueMixin):
             return False
 
         age = datetime.now() - self.datetime_fetched
-        ttl_hours = ibp.config.getint('warnings', 'inmates_cache_ttl')
+        ttl_hours = ibp.CONFIG.getint('warnings', 'inmates_cache_ttl')
         ttl = timedelta(hours=ttl_hours)
         return age < ttl
 
@@ -249,9 +251,6 @@ class Request(db.Model):
         shipped = self.shipment and self.shipment.date_shipped and 'Shipped'
         return (shipped or self.action)
 
-    def __init__(self, **kwargs):
-        super(Request, self).__init__(**kwargs)
-
 
 class Shipment(db.Model):
     __tablename__ = 'shipments'
@@ -275,9 +274,6 @@ class Shipment(db.Model):
         'Unit', uselist=False, back_populates='shipments'
     )
 
-    def __init__(self, **kwargs):
-        super(Shipment, self).__init__(**kwargs)
-
 
 class Comment(db.Model):
     __tablename__ = 'comments'
@@ -289,9 +285,6 @@ class Comment(db.Model):
     body = db.Column(db.Text, nullable=False)
 
     inmate_id = db.Column(db.Integer, db.ForeignKey('inmates.autoid'))
-
-    def __init__(self, **kwargs):
-        super(Comment, self).__init__(**kwargs)
 
     @classmethod
     def from_form(cls, form):
@@ -326,9 +319,6 @@ class Unit(db.Model):
 
     inmates = db.relationship('Inmate', back_populates='unit')
     shipments = db.relationship('Shipment', back_populates='unit')
-
-    def __init__(self, **kwargs):
-        super(Unit, self).__init__(**kwargs)
 
     @declared_attr
     def __table_args__(cls):
@@ -406,6 +396,3 @@ class Credentials(db.Model):
     token_expiry = db.Column(db.DateTime, nullable=False)
     token_uri = db.Column(db.String, nullable=False)
     user_agent = db.Column(db.String)
-
-    def __init__(self, **kwargs):
-        super(Credentials, self).__init__(**kwargs)
