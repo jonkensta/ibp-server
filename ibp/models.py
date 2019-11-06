@@ -1,26 +1,16 @@
-import httplib2
 import functools
 
 from datetime import datetime, timedelta
-
-import apiclient
-import oauth2client.client as oauth2client
 
 import sqlalchemy
 import sqlalchemy.orm
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 
-from flask_login import current_user
-
 import ibp
-
-from . import oauth2
-from . import providers
 
 db = ibp.db
 session = ibp.db.session
-
 
 class UniqueMixin(object):
 
@@ -289,13 +279,6 @@ class Shipment(db.Model):
         super(Shipment, self).__init__(**kwargs)
 
 
-if False:
-    @sqlalchemy.event.listens_for(sqlalchemy.orm.Session, 'after_flush')
-    def delete_empty_shipments(session, ctx):
-        query = Shipment.query.filter(~Shipment.requests.any())
-        query.delete(synchronize_session=False)
-
-
 class Comment(db.Model):
     __tablename__ = 'comments'
 
@@ -371,47 +354,6 @@ class Alert(db.Model):
     inmate_id = db.Column(db.Integer, db.ForeignKey('inmates.autoid'))
     inmate = db.relationship('Inmate', uselist=False, back_populates='alerts')
 
-    def notify(self):
-        raise NotImplementedError
-
-        subject = "New request from {} inmate {}, {} #{:08d}".format(
-            self.inmate.jurisdiction,
-            self.inmate.last_name,
-            self.inmate.first_name,
-            self.inmate.id
-        )
-
-        body = (
-            "This is an automatic email alert "
-            "to inform you that a request has been received from:\n\n"
-            "\t{} inmate {}, {} #{:08d}\n"
-            "\t{}\n\n"
-            "The volunteer processing this request has been asked "
-            "to hold this letter for you.\n"
-            "To stop receiving these alerts, please reply stating so."
-        ).format(
-            self.inmate.jurisdiction,
-            self.inmate.last_name,
-            self.inmate.first_name,
-            self.inmate.id,
-            self.inmate.url
-        )
-
-        current_user.send_message(self.email, subject, body)
-
-
-def lazy_property(fn):
-    attr_name = '_lazy_' + fn.__name__
-
-    @property
-    @functools.wraps(fn)
-    def inner(self):
-        if not hasattr(self, attr_name):
-            setattr(self, attr_name, fn(self))
-        return getattr(self, attr_name)
-
-    return inner
-
 
 class User(db.Model, UniqueMixin):
     __tablename__ = 'users'
@@ -436,33 +378,10 @@ class User(db.Model, UniqueMixin):
     def unique_filter(cls, email, **kwargs):
         return cls.query.filter_by(email=email)
 
-    @classmethod
-    def from_google(cls, google):
-        http = google.authorize(httplib2.Http())
-        service = apiclient.discovery.build('oauth2', 'v2', http=http)
-        userinfo = service.userinfo().get().execute()
-        user = cls.as_unique(userinfo['email'])
-
         if user.credentials is None:
             user.credentials = Credentials.from_google(google)
 
         return user
-
-    @classmethod
-    def get(cls, email):
-        return cls.query.filter_by(email=email).first()
-
-    @lazy_property
-    def _http(self):
-        return self.credentials.authorize(httplib2.Http())
-
-    @lazy_property
-    def _gmail(self):
-        return apiclient.discovery.build('gmail', 'v1', http=self._http)
-
-    @lazy_property
-    def _oauth2(self):
-        return apiclient.discovery.build('oauth2', 'v2', http=self._http)
 
     @property
     def is_authenticated(self):
@@ -490,36 +409,3 @@ class Credentials(db.Model):
 
     def __init__(self, **kwargs):
         super(Credentials, self).__init__(**kwargs)
-
-    @classmethod
-    def from_google(cls, google):
-        kwargs = dict(
-            access_token=google.access_token,
-            client_id=google.client_id,
-            client_secret=google.client_secret,
-            refresh_token=google.refresh_token,
-            token_expiry=google.token_expiry,
-            token_uri=google.token_uri,
-            user_agent=google.user_agent
-        )
-        credentials = cls(**kwargs)
-        db.session.commit()
-        return credentials
-
-    @lazy_property
-    def _google(self):
-        credentials = oauth2client.OAuth2Credentials(
-            self.access_token,
-            self.client_id,
-            self.client_secret,
-            self.refresh_token,
-            self.token_expiry,
-            self.token_uri,
-            self.user_agent
-        )
-        store = oauth2.DatabaseStore(session, self.autoid)
-        credentials.set_store(store)
-        return credentials
-
-    def authorize(self, http):
-        return self._google.authorize(http)
