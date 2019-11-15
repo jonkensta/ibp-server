@@ -1,5 +1,7 @@
 alembic
 Flask
 Flask-SQLAlchemy
+Flask-RESTful
+marshmallow
 SQLAlchemy
 git+git://github.com/jonkensta/inmate-providers@master#egg=pymates
