@@ -8,8 +8,9 @@ import typing
 from datetime import datetime
 
 import sqlalchemy
-from sqlalchemy import Column, Enum
-from sqlalchemy import Text, Integer, String, DateTime, Date, ForeignKey
+from sqlalchemy import (
+    Column, Enum, Text, Integer, String, DateTime, Date, ForeignKey
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.ext.declarative import declared_attr
