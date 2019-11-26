@@ -12,6 +12,7 @@ from sqlalchemy import (
     Column, Enum, Text, Integer, String, DateTime, Date, ForeignKey
 )
 from sqlalchemy.orm import relationship
+from sqlalchemy.processors import str_to_date
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -28,22 +29,23 @@ Jurisdiction = Enum('Texas', 'Federal', name='jurisdiction_enum')
 class ReleaseDate(String):
     """Inmate release date database column type."""
 
-    def __init__(self, date_format='%Y-%m-%d'):
-        super(ReleaseDate, self).__init__()
-        self.date_format = date_format
-
     # pylint: disable=unused-argument
-    def result_processor(self, *args, **kwargs):
+    def result_processor(self, dialect, coltype):
         """Return result processor."""
-        def process(value):
-            if value is None:
-                return None
-            strptime = datetime.strptime
-            try:
-                value = strptime(value, self.date_format).date()
-            except ValueError:
-                pass
+
+        super_result_processor = super().result_processor(dialect, coltype)
+
+        def identity(value):
             return value
+
+        process_string = super_result_processor or identity
+
+        def process(value):
+            try:
+                return str_to_date(value)
+            except ValueError:
+                return process_string(value)
+
         return process
 
 
