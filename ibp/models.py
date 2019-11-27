@@ -1,11 +1,9 @@
-"""
-IBP database models.
+"""IBP SQLAlchemy models.
 """
 
 # pylint: disable=too-few-public-methods, invalid-name
 
 import typing
-from datetime import datetime
 
 import sqlalchemy
 from sqlalchemy import (
@@ -53,7 +51,13 @@ class InmateQuery(BaseQuery):
     """Class for special inmate query methods"""
 
     def providers_by_id(self, id_):
-        """Query inmate providers with an inmate ID."""
+        """Query inmate providers with an inmate ID.
+
+        :param id: Inmate TDCJ or FBOP ID to search
+        :type id: int.
+
+        :returns: (inmates, errors) tuple.
+        """
 
         inmates, errors = pymates.query_by_inmate_id(id_)
         inmates = map(Inmate.from_response, inmates)
@@ -66,7 +70,16 @@ class InmateQuery(BaseQuery):
         return inmates, errors
 
     def providers_by_name(self, first_name, last_name):
-        """Query inmate providers with an inmate name."""
+        """Query inmate providers with an inmate ID.
+
+        :param first_name: Inmate first name to search.
+        :type first_name: str.
+
+        :param last_name: Inmate last name to search.
+        :type last_name: str.
+
+        :returns: (inmates, errors) tuple.
+        """
 
         inmates, errors = pymates.query_by_name(first_name, last_name)
         inmates = map(Inmate.from_response, inmates)
@@ -83,7 +96,7 @@ class InmateQuery(BaseQuery):
 
 
 class Inmate(Base):
-    """Model for Texas Federal and state inmates."""
+    """SQLAlchemy Model for Texas Federal and state inmates."""
 
     __tablename__ = 'inmates'
     query_class = InmateQuery
