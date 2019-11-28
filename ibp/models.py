@@ -1,16 +1,23 @@
-"""SQLAlchemy models used for the IBP database.
+""":py:mod:`sqlalchemy` models used for the IBP database.
 
 The following classes model the database abstraction used by IBP for its SQLite
-database. These all relate to the day-to-day logistics of handling searches and
-lookups for Texas inmates and the handling, processing, and shipments
-corresponding to requests from them.
+database. These relate to the day-to-day IBP logistics, including:
 
-In addition, this module also defines a few convenience items.
-These include classes and aliases for special column types, an inmate
-foreign-key mix-in, and a special InmateQuery class for providing extra methods
-to the Inmate class' query object added by the Flask-SQLAlchemy extension.
-These are exported and documented but should not likely be used anywhere else
-apart from here.
+    * recording results of searches for inmates through :py:class:`Inmate`,
+    * recording volunteer lookups for inmates through :py:class:`Lookup`,
+    * recording volunteer comments on inmates through :py:class:`Comment`,
+    * processing book requests from inmates through :py:class:`Request`,
+    * recording package shipments through :py:class:`Shipment`,
+    * recording unit jurisdiction and address information through :py:class:`Unit`
+
+In addition to the models, this module also defines a few convenience items:
+
+    * Special column types :py:data:`Jurisdiction`, :py:class:`ReleaseDate`
+    * Query class :py:class:`InmateQuery` for extra :py:class:`Inmate` query methods.
+    * Inmate foreign-key mix-in :py:class:`HasInmateIndexKey`
+
+These utility items are exported and documented but should not likely be used
+anywhere else apart from here.
 
 """
 
@@ -34,41 +41,42 @@ import pymates
 import ibp
 
 Base: typing.Any = ibp.db.Model  # typing.Any to suppress mypy errors.
-"""Base class for SQLAlchemy models.
+"""Base class for :py:mod:`sqlalchemy` models.
 
 This is actually just an alias for the Model base class exposed by the
-Flask-SQLAlchemy plugin. However, we alias it as Base to support the
+:py:mod:`flask_sqlalchemy` plugin. However, we alias it as Base to support the
 possibility that might change the base class for our models down the road.
-This also seems to follow the naming SQLAlchemy naming convention more
-closely.
+This also seems to follow the naming :py:mod:`sqlalchemy` naming convention
+more closely.
 """
 
 Jurisdiction = Enum('Texas', 'Federal', name='jurisdiction_enum')
-"""Alias for Inmate jurisdiction SQLAlchemy column type.
+"""Alias for inmate jurisdiction :py:class:`sqlalchemy.types.Enum`.
 
 Columns of this type store the jurisdiction level of the inmate.
 Currently, this must be either 'Texas' or 'Federal', but the supported list
-may be extended to include other jurisdictions in the future (for example,
-other states or counties).
+may be extended to include other jurisdictions in the future
+(for example, other states or counties).
 """
 
 
 class ReleaseDate(String):
     """Inmate release date SQLAlchemy column type.
 
-    Sometimes release dates returned from provider queries are not dates at
-    all; instead, they are strings like "LIFE SENTENCE" or "UNKNOWN". To handle
-    these cases, we model release dates as :py:class:`sqlalchemy.String`
-    columns but override the process by which they are extracted from the
-    database.  Specifically, we subclass :py:class:`sqlalchemy.String` but
-    override its :py:func:`result_processor` method to do the following:
+    Sometimes "release dates" returned from the providers are not dates at all;
+    instead, they are strings like "LIFE SENTENCE" or "UNKNOWN". To handle
+    these cases, we model release dates as a :py:class:`sqlalchemy.types.String`
+    type but override the :py:meth:`sqlalchemy.types.String.result_processor`
+    method used to postprocess values extracted from the database. In
+    particular, when a value is extracted from this column, the following
+    happens:
 
-    1. We attempt to parse the string value as a date.
-    2. If this fails, we parse the String value as a String (cannot fail).
-    3. The value is returned as part of the query results.
+    1. We process the string value as a :py:class:`sqlalchemy.types.Date`.
+    2. If this fails, we process the value as a :py:class:`sqlalchemy.types.String`.
 
-    :note: This column type supports the same input parameters as the
-           :class:`sqlalchemy.String` column type.
+    :note: This column type subclasses :py:class:`sqlalchemy.types.String`
+           without overriding :py:func:`__init__` and uses the same inputs.
+
 
     """
 
@@ -96,16 +104,18 @@ class InmateQuery(BaseQuery):
     """Query class for supporting special inmate search methods.
     """
 
+    # pylint: disable=redefined-builtin
     def providers_by_id(self, id):
         """Query inmate providers with an inmate ID.
 
         :param id: Inmate TDCJ or FBOP ID to search.
         :type id: int
 
-        :returns: tuple of (inmates, errors) where
+        :returns: tuple of (:py:data:`inmates`, :py:data:`errors`) where
 
-            - `inmates` is a QueryResult for the inmate search.
-            - `errors` is a list of error strings.
+            - :py:data:`inmates` is a QueryResult for the inmate search.
+            - :py:data:`errors` is a list of error strings.
+
         """
 
         inmates, errors = pymates.query_by_inmate_id(id)
@@ -127,10 +137,11 @@ class InmateQuery(BaseQuery):
         :param last_name: Inmate last name to search.
         :type last_name: str
 
-        :returns: tuple of (inmates, errors) where
+        :returns: tuple of (:py:data:`inmates`, :py:data:`errors`) where
 
-            - `inmates` is a QueryResult for the inmate search.
-            - `errors` is a list of error strings.
+            - :py:data:`inmates` is a QueryResult for the inmate search.
+            - :py:data:`errors` is a list of error strings.
+
         """
 
         inmates, errors = pymates.query_by_name(first_name, last_name)
@@ -156,26 +167,36 @@ class Inmate(Base):
     query_class = InmateQuery
 
     first_name = Column(String)
-    """Inmate first name as returned by HumanName module."""
+    """Inmate first name.
+
+    In some cases, this is given by the provider; in others cases, it is parsed
+    from the full name using :py:class:`nameparser.parser.HumanName`.
+
+    """
 
     last_name = Column(String)
-    """Inmate last name as returned by HumanName module."""
+    """Inmate last name.
+
+    In some cases, this is given as-is by the provider; in others cases, it is
+    parsed from the full name using :py:class:`nameparser.parser.HumanName`.
+
+    """
 
     jurisdiction = Column(Jurisdiction, primary_key=True)
-    """Prison system that this inmate resides in."""
+    """Prison system holding the inmate."""
 
     id = Column(Integer, primary_key=True)
-    """Numeric identifier as used by the FBOP or TDCJ."""
+    """Inmate's numeric identifier as used in their jurisdiction."""
 
     unit_id = Column(Integer, ForeignKey('units.id'), default=None)
-    """Foreign key into the table corresponding to `Unit`.
+    """Foreign key into the table corresponding to :py:class:`Unit`.
 
-    Only used to provide a way for the `Unit` relationship to be resolved.
+    Only used to resolve the relationship to :py:class:`Unit`.
 
     """
 
     unit = relationship('Unit', uselist=False)
-    """Prison unit that this inmate is reported to reside."""
+    """Prison unit holding the inmate."""
 
     sex = Column(String)
     """Inmate gender as reported by provider."""
@@ -190,7 +211,7 @@ class Inmate(Base):
     """Date of when this inmate is set to be released."""
 
     datetime_fetched = Column(DateTime)
-    """Datetime of when this inmate entry was last fetched by a provider."""
+    """Datetime when inmate data was fetched from provider."""
 
     lookups = relationship('Lookup', order_by='desc(Lookup.datetime)')
     """List of lookups performed on this inmate by IBP volunteers."""
@@ -212,14 +233,13 @@ class Inmate(Base):
 
 
 class HasInmateIndexKey:
-    """
-    Mix-In for injecting an Inmate + index key.
+    """Mix-In for injecting an Inmate + index key.
     """
     # pylint: disable=no-self-argument, no-self-use
 
     @declared_attr
     def __table_args__(cls):
-        """Declare ForeignKeyConstraint attribute for inmates table."""
+        """Declare ForeignKeyConstraint attribute into inmates table."""
         return (
             ForeignKeyConstraint(
                 ['inmate_jurisdiction', 'inmate_id'],
@@ -229,17 +249,17 @@ class HasInmateIndexKey:
 
     @declared_attr
     def inmate_jurisdiction(cls):
-        """Declare Inmate jurisdiction column attribute."""
+        """Jurisdiction of inmate this item pertains to."""
         return Column(Jurisdiction, primary_key=True)
 
     @declared_attr
     def inmate_id(cls):
-        """Declare Inmate ID column attribute."""
+        """ID of inmate this item pertains to."""
         return Column(Integer, primary_key=True)
 
     @declared_attr
     def index(cls):
-        """Declare index column attribute."""
+        """Counter to disambiguate items pointing to the same inmate."""
         return Column(Integer, primary_key=True)
 
 
@@ -249,6 +269,7 @@ class Lookup(Base, HasInmateIndexKey):
     __tablename__ = 'lookups'
 
     datetime = Column(DateTime, nullable=False)
+    """Datetime of when the inmate lookup was performed."""
 
 
 class Comment(Base, HasInmateIndexKey):
@@ -257,8 +278,13 @@ class Comment(Base, HasInmateIndexKey):
     __tablename__ = 'comments'
 
     datetime = Column(DateTime, nullable=False)
+    """Datetime of when the comment was made."""
+
     author = Column(String, nullable=False)
+    """The author of the comment."""
+
     body = Column(Text, nullable=False)
+    """The body of the comment."""
 
 
 class Request(Base, HasInmateIndexKey):
@@ -267,33 +293,63 @@ class Request(Base, HasInmateIndexKey):
     __tablename__ = 'requests'
 
     date_processed = Column(Date, nullable=False)
+    """Date that the request was processed by a volunteer."""
+
     date_postmarked = Column(Date, nullable=False)
+    """Date that the request was postmarked by the mail service."""
 
     Action = Enum('Filled', 'Tossed', name='action_enum')
+    """Alias for request action :py:class:`sqlalchemy.types.Enum`.
+
+    Available actions right now are 'Filled' and 'Tossed':
+
+    - 'Filled' means that a package was ordered to be made in response to this request.
+    - 'Tossed' means that the letter was thrown away and no package was made.
+
+    """
+
     action = Column(Action, nullable=False)
+    """Action taken by the IBP volunteer in response to the request."""
 
     inmate = relationship('Inmate', uselist=False)
+    """Inmate that made the request."""
 
     shipment_id = Column(Integer, ForeignKey('shipments.id'))
+    """Foreign key into the table corresponding to :py:class:`Shipment`.
+
+    Only used to resolve the relationship to :py:class:`Shipment`.
+
+    """
+
     shipment = relationship('Shipment', uselist=False)
+    """Shipment containing package made in response to this request."""
 
 
 class Shipment(Base):
-    """Model for request shipments."""
+    """SQLAlchemy ORM model for shipments made in response to requests."""
 
     __tablename__ = 'shipments'
 
     id = Column(Integer, primary_key=True)
+    """Auto-incrementing identifier to serve as primary key."""
 
     date_shipped = Column(Date, nullable=False)
+    """Date that the shipment was made."""
 
     tracking_url = Column(String)
+    """Shipping service tracking URL if available."""
+
     tracking_code = Column(String)
+    """Shipping service tracking code if available."""
 
     weight = Column(Integer, nullable=False)
-    postage = Column(Integer, nullable=False)  # postage in cents
+    """Weight of the shipment in ounces."""
+
+    postage = Column(Integer, nullable=False)
+    """Postage of the shipment in US cents."""
 
     requests = relationship('Request')
+    """Lists of requests this shipment responds to."""
 
     unit_id = Column(Integer, ForeignKey('units.id'), default=None)
     unit = relationship('Unit', uselist=False)
@@ -305,20 +361,47 @@ class Unit(Base):
     __tablename__ = 'units'
 
     id = Column(Integer, primary_key=True)
+    """Auto-incrementing identifier to serve as primary key."""
 
     name = Column(String, nullable=False)
+    """Name of the prison unit."""
+
     street1 = Column(String, nullable=False)
+    """Street1 of the prison unit address."""
+
     street2 = Column(String)
+    """Street2 of the prison unit address."""
 
     city = Column(String, nullable=False)
+    """City of the prison unit address."""
+
     zipcode = Column(String(12), nullable=False)
+    """Zipcode of the prison unit address."""
+
     state = Column(String(3), nullable=False)
+    """State of the prison unit address."""
 
     url = Column(String)
+    """URL of the prison unit if available."""
+
     jurisdiction = Column(Jurisdiction)
+    """Jurisdiction of the prison unit."""
 
     ShippingMethod = Enum('Box', 'Individual', name='shipping_enum')
+    """Alias for shipping method :py:class:`sqlalchemy.types.Enum`.
+
+    Available shipping methods right now are 'Box' and 'Individual':
+
+    - 'Box' means that this unit allows multiple inmate packages to be combined in bulk.
+    - 'Individual' means that a shipment must be made for each inmate package.
+
+    """
+
     shipping_method = Column(ShippingMethod)
+    """Shipping method to use for this prison unit."""
 
     inmates = relationship('Inmate')
+    """List of inmates residing in this prison unit."""
+
     shipments = relationship('Shipment')
+    """List of shipments made to this prison unit."""

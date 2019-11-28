@@ -11,18 +11,33 @@ SQLAlchemy Models
 
 Model Types
 -----------
-.. autoclass:: ibp.models.Inmate
+.. autoclass:: Inmate
     :members:
     :exclude-members: query_class
 
+.. autoclass:: Request
+    :members:
+
+.. autoclass:: Lookup
+    :members:
+
+.. autoclass:: Comment
+    :members:
+
+.. autoclass:: Shipment
+    :members:
+
+.. autoclass:: Unit
+    :members:
+
 Column Types
 ------------
-.. autodata:: ibp.models.Jurisdiction
-.. autoclass:: ibp.models.ReleaseDate
+.. autodata:: Jurisdiction
+.. autoclass:: ReleaseDate
 
 Utility Types
 -------------
-.. autoclass:: ibp.models.InmateQuery
+.. autoclass:: InmateQuery
     :members:
 
-.. autoclass:: ibp.models.HasInmateIndexKey
+.. autoclass:: HasInmateIndexKey

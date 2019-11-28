@@ -57,3 +57,9 @@ html_static_path = []
 
 autodoc_member_order = 'bysource'
 
+intersphinx_mapping = {
+    'Python': ('https://docs.python.org/3', None),
+    'SQLAlchemy': ('https://docs.sqlalchemy.org/en/13/', None),
+    'Flask-SQLAlchemy': ('https://flask-sqlalchemy.palletsprojects.com/en/2.x/', None),
+    'nameparser': ('https://nameparser.readthedocs.io/en/latest/', None),
+}
