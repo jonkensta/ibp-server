@@ -3,5 +3,6 @@ Flask
 Flask-CORS
 Flask-SQLAlchemy
 marshmallow
+sphinx
 SQLAlchemy
 git+git://github.com/jonkensta/inmate-providers@master#egg=pymates
