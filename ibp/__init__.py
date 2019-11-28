@@ -7,7 +7,6 @@ from configparser import SafeConfigParser
 
 import flask
 from flask_cors import CORS
-from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 
 CONFIG = SafeConfigParser()
@@ -40,7 +39,6 @@ db.Model.metadata.naming_convention = {
     'pk': 'pk_%(table_name)s'
 }
 
-api = Api(app)
 CORS(app)
 
 import ibp.views  # pylint: disable=wrong-import-position
