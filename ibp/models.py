@@ -48,6 +48,7 @@ This is actually just an alias for the Model base class exposed by the
 possibility that might change the base class for our models down the road.
 This also seems to follow the naming :py:mod:`sqlalchemy` naming convention
 more closely.
+
 """
 
 Jurisdiction = Enum('Texas', 'Federal', name='jurisdiction_enum')
@@ -57,6 +58,7 @@ Columns of this type store the jurisdiction level of the inmate.
 Currently, this must be either 'Texas' or 'Federal', but the supported list
 may be extended to include other jurisdictions in the future
 (for example, other states or counties).
+
 """
 
 
@@ -65,18 +67,17 @@ class ReleaseDate(String):
 
     Sometimes "release dates" returned from the providers are not dates at all;
     instead, they are strings like "LIFE SENTENCE" or "UNKNOWN". To handle
-    these cases, we model release dates as a :py:class:`sqlalchemy.types.String`
-    type but override the :py:meth:`sqlalchemy.types.String.result_processor`
-    method used to postprocess values extracted from the database. In
-    particular, when a value is extracted from this column, the following
-    happens:
+    these cases, we model release dates as a
+    :py:class:`sqlalchemy.types.String` type but override the
+    :py:meth:`sqlalchemy.types.String.result_processor` method used to
+    postprocess values extracted from the database. In particular, when a value
+    is extracted from this column, the following happens:
 
     1. We process the string value as a :py:class:`sqlalchemy.types.Date`.
     2. If this fails, we process the value as a :py:class:`sqlalchemy.types.String`.
 
     :note: This column type subclasses :py:class:`sqlalchemy.types.String`
-           without overriding :py:func:`__init__` and uses the same inputs.
-
+           without overriding :py:func:`__init__` and thus uses the same inputs.
 
     """
 
@@ -102,6 +103,36 @@ class ReleaseDate(String):
 
 class InmateQuery(BaseQuery):
     """Query class for supporting special inmate search methods.
+
+    When using the :py:mod:`flask_sqlalchemy` extension, queries are done using
+    query objects that are attached to the model classes. This query object is
+    of type :py:data:`query_class`, a variable that can be attached to the
+    model class to customize query objects for a particular model.
+
+    In short, this class customizes the query object of our :py:class:`Inmate`
+    model by adding the following extra query methods:
+
+        - :py:meth:`providers_by_id` - query providers with an inmate ID.
+        - :py:meth:`providers_by_name` - query providers with an inmate name.
+
+    These methods work as follows:
+
+        1) Query the providers with the given information.
+        2) Record errors and store results in the :py:class:`Inmate` database.
+        3) Query the :py:class:`Inmate` database with the given information.
+        4) Return both the errors and results.
+
+    While these steps may seem redundant, they are intentional: The first two
+    steps update the data in the local database, and the last two steps return
+    what data is available regardless. In this regard, the local database
+    operates as something of a backup cache that updates the data when it can.
+
+    :note: See `Flask-SQLAlchemy query classes`_ for additional details.
+
+    .. _Flask-SQLAlchemy query classes: \
+            https://flask-sqlalchemy.palletsprojects.com/\
+            /en/2.x/customizing/#query-class
+
     """
 
     # pylint: disable=redefined-builtin
@@ -234,6 +265,26 @@ class Inmate(Base):
 
 class HasInmateIndexKey:
     """Mix-In for injecting an Inmate + index key.
+
+    This mix-in does the following:
+
+        - It injects an inmate jurisdiction + id + unique index primary key.
+        - It adds a foreign key constraint for the :py:class:`Inmate` table.
+
+    Injecting these attributes via inheritance is done using the
+    :py:class:`sqlalchemy.ext.declarative.declared_attr` decorator class.
+
+    In other words, any class that inherits from this mix-in will have the
+    following columns added to it:
+
+        - :py:data:`inmate_jurisdiction`
+        - :py:data:`inmate_id`
+        - :py:data:`index`
+
+    where these columns form a compound key and further the combination of
+    :py:data:`inmate_jurisdiction` and :py:data:`inmate_id` form a foreign-key
+    into the table corresponding to the :py:class:`Inmate` model.
+
     """
     # pylint: disable=no-self-argument, no-self-use
 
@@ -249,22 +300,23 @@ class HasInmateIndexKey:
 
     @declared_attr
     def inmate_jurisdiction(cls):
-        """Jurisdiction of inmate this item pertains to."""
+        """Jurisdiction of corresponding inmate."""
         return Column(Jurisdiction, primary_key=True)
 
     @declared_attr
     def inmate_id(cls):
-        """ID of inmate this item pertains to."""
+        """Numeric ID of corresponding inmate."""
         return Column(Integer, primary_key=True)
 
     @declared_attr
     def index(cls):
-        """Counter to disambiguate items pointing to the same inmate."""
+        """Index to disambiguate items pointing to the same inmate."""
         return Column(Integer, primary_key=True)
 
 
 class Lookup(Base, HasInmateIndexKey):
-    """Model for inmate system lookups."""
+    """SQLAlchemy ORM model for inmate system lookups.
+    """
 
     __tablename__ = 'lookups'
 
@@ -273,7 +325,8 @@ class Lookup(Base, HasInmateIndexKey):
 
 
 class Comment(Base, HasInmateIndexKey):
-    """Model comments on a particular inmates."""
+    """SQLAlchemy ORM model comments on a particular inmates.
+    """
 
     __tablename__ = 'comments'
 
@@ -288,7 +341,8 @@ class Comment(Base, HasInmateIndexKey):
 
 
 class Request(Base, HasInmateIndexKey):
-    """Model for inmate package request."""
+    """SQLAlchemy ORM model for inmate package requests.
+    """
 
     __tablename__ = 'requests'
 
@@ -303,8 +357,8 @@ class Request(Base, HasInmateIndexKey):
 
     Available actions right now are 'Filled' and 'Tossed':
 
-    - 'Filled' means that a package was ordered to be made in response to this request.
-    - 'Tossed' means that the letter was thrown away and no package was made.
+    - 'Filled' means that a package was ordered in response to this request.
+    - 'Tossed' means that the letter was thrown away without ordering a package.
 
     """
 
@@ -312,7 +366,7 @@ class Request(Base, HasInmateIndexKey):
     """Action taken by the IBP volunteer in response to the request."""
 
     inmate = relationship('Inmate', uselist=False)
-    """Inmate that made the request."""
+    """Inmate that sent the request."""
 
     shipment_id = Column(Integer, ForeignKey('shipments.id'))
     """Foreign key into the table corresponding to :py:class:`Shipment`.
@@ -322,11 +376,12 @@ class Request(Base, HasInmateIndexKey):
     """
 
     shipment = relationship('Shipment', uselist=False)
-    """Shipment containing package made in response to this request."""
+    """Shipment containing this request's corresponding package."""
 
 
 class Shipment(Base):
-    """SQLAlchemy ORM model for shipments made in response to requests."""
+    """SQLAlchemy ORM model for shipments made in response to requests.
+    """
 
     __tablename__ = 'shipments'
 
@@ -352,11 +407,19 @@ class Shipment(Base):
     """Lists of requests this shipment responds to."""
 
     unit_id = Column(Integer, ForeignKey('units.id'), default=None)
+    """Foreign key into the table corresponding to :py:class:`Unit`.
+
+    Only used to resolve the relationship to :py:class:`Unit`.
+
+    """
+
     unit = relationship('Unit', uselist=False)
+    """Unit that this shipment was sent to."""
 
 
 class Unit(Base):
-    """Model for prison units."""
+    """SQLAlchemy ORM model for prison units.
+    """
 
     __tablename__ = 'units'
 
@@ -392,7 +455,7 @@ class Unit(Base):
 
     Available shipping methods right now are 'Box' and 'Individual':
 
-    - 'Box' means that this unit allows multiple inmate packages to be combined in bulk.
+    - 'Box' means that this unit receives multiple packages in a single box.
     - 'Individual' means that a shipment must be made for each inmate package.
 
     """

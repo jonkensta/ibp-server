@@ -18,8 +18,8 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'ibp'
-copyright = '2019, Jonathan Starr'
-author = 'Jonathan Starr'
+copyright = '2019, Inside Books Project'
+author = 'Inside Books Project'
 
 
 # -- General configuration ---------------------------------------------------
@@ -60,6 +60,6 @@ autodoc_member_order = 'bysource'
 intersphinx_mapping = {
     'Python': ('https://docs.python.org/3', None),
     'SQLAlchemy': ('https://docs.sqlalchemy.org/en/13/', None),
-    'Flask-SQLAlchemy': ('https://flask-sqlalchemy.palletsprojects.com/en/2.x/', None),
     'nameparser': ('https://nameparser.readthedocs.io/en/latest/', None),
+    'Flask-SQLAlchemy': ('https://flask-sqlalchemy.palletsprojects.com/en/2.x/', None),
 }
