@@ -1,20 +1,28 @@
-.. ibp documentation master file, created by
-   sphinx-quickstart on Tue Nov 26 18:14:27 2019.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to ibp's documentation!
-===============================
+Documentation for ibp webapp
+============================
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+SQLAlchemy Models
+`````````````````
+.. automodule:: ibp.models
 
+Model Types
+-----------
+.. autoclass:: ibp.models.Inmate
+    :members:
+    :exclude-members: query_class
 
-Indices and tables
-==================
+Column Types
+------------
+.. autodata:: ibp.models.Jurisdiction
+.. autoclass:: ibp.models.ReleaseDate
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+Utility Types
+-------------
+.. autoclass:: ibp.models.InmateQuery
+    :members:
+
+.. autoclass:: ibp.models.HasInmateIndexKey

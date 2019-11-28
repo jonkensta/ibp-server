@@ -1,4 +1,17 @@
-"""IBP SQLAlchemy models.
+"""SQLAlchemy models used for the IBP database.
+
+The following classes model the database abstraction used by IBP for its SQLite
+database. These all relate to the day-to-day logistics of handling searches and
+lookups for Texas inmates and the handling, processing, and shipments
+corresponding to requests from them.
+
+In addition, this module also defines a few convenience items.
+These include classes and aliases for special column types, an inmate
+foreign-key mix-in, and a special InmateQuery class for providing extra methods
+to the Inmate class' query object added by the Flask-SQLAlchemy extension.
+These are exported and documented but should not likely be used anywhere else
+apart from here.
+
 """
 
 # pylint: disable=too-few-public-methods, invalid-name
@@ -20,12 +33,44 @@ import pymates
 
 import ibp
 
-Base: typing.Any = ibp.db.Model  # Add typing.Any to suppress mypy errors.
+Base: typing.Any = ibp.db.Model  # typing.Any to suppress mypy errors.
+"""Base class for SQLAlchemy models.
+
+This is actually just an alias for the Model base class exposed by the
+Flask-SQLAlchemy plugin. However, we alias it as Base to support the
+possibility that might change the base class for our models down the road.
+This also seems to follow the naming SQLAlchemy naming convention more
+closely.
+"""
+
 Jurisdiction = Enum('Texas', 'Federal', name='jurisdiction_enum')
+"""Alias for Inmate jurisdiction SQLAlchemy column type.
+
+Columns of this type store the jurisdiction level of the inmate.
+Currently, this must be either 'Texas' or 'Federal', but the supported list
+may be extended to include other jurisdictions in the future (for example,
+other states or counties).
+"""
 
 
 class ReleaseDate(String):
-    """Inmate release date database column type."""
+    """Inmate release date SQLAlchemy column type.
+
+    Sometimes release dates returned from provider queries are not dates at
+    all; instead, they are strings like "LIFE SENTENCE" or "UNKNOWN". To handle
+    these cases, we model release dates as :py:class:`sqlalchemy.String`
+    columns but override the process by which they are extracted from the
+    database.  Specifically, we subclass :py:class:`sqlalchemy.String` but
+    override its :py:func:`result_processor` method to do the following:
+
+    1. We attempt to parse the string value as a date.
+    2. If this fails, we parse the String value as a String (cannot fail).
+    3. The value is returned as part of the query results.
+
+    :note: This column type supports the same input parameters as the
+           :class:`sqlalchemy.String` column type.
+
+    """
 
     # pylint: disable=unused-argument
     def result_processor(self, dialect, coltype):
@@ -48,37 +93,44 @@ class ReleaseDate(String):
 
 
 class InmateQuery(BaseQuery):
-    """Class for special inmate query methods"""
+    """Query class for supporting special inmate search methods.
+    """
 
-    def providers_by_id(self, id_):
+    def providers_by_id(self, id):
         """Query inmate providers with an inmate ID.
 
-        :param id: Inmate TDCJ or FBOP ID to search
-        :type id: int.
+        :param id: Inmate TDCJ or FBOP ID to search.
+        :type id: int
 
-        :returns: (inmates, errors) tuple.
+        :returns: tuple of (inmates, errors) where
+
+            - `inmates` is a QueryResult for the inmate search.
+            - `errors` is a list of error strings.
         """
 
-        inmates, errors = pymates.query_by_inmate_id(id_)
+        inmates, errors = pymates.query_by_inmate_id(id)
         inmates = map(Inmate.from_response, inmates)
 
         with self.session.begin_nested():
             for inmate in inmates:
                 self.session.merge(inmate)
 
-        inmates = self.filter_by(id=id_)
+        inmates = self.filter_by(id=id)
         return inmates, errors
 
     def providers_by_name(self, first_name, last_name):
         """Query inmate providers with an inmate ID.
 
         :param first_name: Inmate first name to search.
-        :type first_name: str.
+        :type first_name: str
 
         :param last_name: Inmate last name to search.
-        :type last_name: str.
+        :type last_name: str
 
-        :returns: (inmates, errors) tuple.
+        :returns: tuple of (inmates, errors) where
+
+            - `inmates` is a QueryResult for the inmate search.
+            - `errors` is a list of error strings.
         """
 
         inmates, errors = pymates.query_by_name(first_name, last_name)
@@ -96,34 +148,63 @@ class InmateQuery(BaseQuery):
 
 
 class Inmate(Base):
-    """SQLAlchemy Model for Texas Federal and state inmates."""
+    """SQLAlchemy ORM model for inmate data.
+    """
 
     __tablename__ = 'inmates'
+
     query_class = InmateQuery
 
     first_name = Column(String)
+    """Inmate first name as returned by HumanName module."""
+
     last_name = Column(String)
+    """Inmate last name as returned by HumanName module."""
 
     jurisdiction = Column(Jurisdiction, primary_key=True)
+    """Prison system that this inmate resides in."""
+
     id = Column(Integer, primary_key=True)
+    """Numeric identifier as used by the FBOP or TDCJ."""
 
     unit_id = Column(Integer, ForeignKey('units.id'), default=None)
+    """Foreign key into the table corresponding to `Unit`.
+
+    Only used to provide a way for the `Unit` relationship to be resolved.
+
+    """
+
     unit = relationship('Unit', uselist=False)
+    """Prison unit that this inmate is reported to reside."""
 
     sex = Column(String)
+    """Inmate gender as reported by provider."""
+
     url = Column(String)
+    """Inmate URL where their information is web accessible."""
+
     race = Column(String)
+    """Inmate race as reported by provider."""
+
     release = Column(ReleaseDate)
+    """Date of when this inmate is set to be released."""
 
     datetime_fetched = Column(DateTime)
+    """Datetime of when this inmate entry was last fetched by a provider."""
 
     lookups = relationship('Lookup', order_by='desc(Lookup.datetime)')
+    """List of lookups performed on this inmate by IBP volunteers."""
+
     comments = relationship('Comment', order_by="desc(Comment.datetime)")
+    """List of comments on this inmate made by IBP volunteers."""
+
     requests = relationship('Request', order_by="desc(Request.date_postmarked)")
+    """List of requests made by this inmate."""
 
     @classmethod
     def from_response(cls, response):
-        """Construct Inmate object from pymates response"""
+        """Construct Inmate object from `pymates` response object.
+        """
         kwargs = dict(response)
         kwargs['id'] = int(kwargs['id'].replace('-', ''))
         kwargs['unit'] = Unit.query.filter_by(name=kwargs['unit']).first()
@@ -131,12 +212,14 @@ class Inmate(Base):
 
 
 class HasInmateIndexKey:
-    """Mix-In for injecting an Inmate + index key."""
+    """
+    Mix-In for injecting an Inmate + index key.
+    """
     # pylint: disable=no-self-argument, no-self-use
 
     @declared_attr
     def __table_args__(cls):
-        """Declare ForeignKeyConstraint Table attribute."""
+        """Declare ForeignKeyConstraint attribute for inmates table."""
         return (
             ForeignKeyConstraint(
                 ['inmate_jurisdiction', 'inmate_id'],
