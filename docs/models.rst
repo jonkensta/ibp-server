@@ -1,6 +1,5 @@
 SQLAlchemy Models
 =================
-
 .. automodule:: ibp.models
 
 Model Types
@@ -27,6 +26,7 @@ Model Types
 Column Types
 ------------
 .. autodata:: Jurisdiction
+
 .. autoclass:: ReleaseDate
 
 Utility Types

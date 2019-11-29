@@ -191,6 +191,14 @@ class InmateQuery(BaseQuery):
 
 class Inmate(Base):
     """SQLAlchemy ORM model for inmate data.
+
+    This model contains all of the inmate data pulled from various sources.
+    Further, it maintains associations with other types of inmate data, such as
+    inmate requests and the unit where the inmate is located.
+
+    :note: This model uses the :py:class:`InmateQuery` class as the type of its
+           query object. This query type exposes additional query methods.
+
     """
 
     __tablename__ = 'inmates'
@@ -255,8 +263,17 @@ class Inmate(Base):
 
     @classmethod
     def from_response(cls, response):
-        """Construct Inmate object from `pymates` response object.
+        """Construct a :py:class:`Inmate` object from `pymates` response.
+
+        This is a convenience classmethod for constructing Inmate objects from
+        provider responses.
+
+        :param response: Response from inmate data provider.
+
+        :returns: Constructed :py:class:`Inmate` object.
+
         """
+
         kwargs = dict(response)
         kwargs['id'] = int(kwargs['id'].replace('-', ''))
         kwargs['unit'] = Unit.query.filter_by(name=kwargs['unit']).first()
@@ -316,6 +333,11 @@ class HasInmateIndexKey:
 
 class Lookup(Base, HasInmateIndexKey):
     """SQLAlchemy ORM model for inmate system lookups.
+
+    It's occasionally useful to know when a particular inmate has been looked
+    up by IBP volunteers. For this reason, we maintain a lookup table that we
+    update every time an inmate is looked up.
+
     """
 
     __tablename__ = 'lookups'
@@ -326,6 +348,12 @@ class Lookup(Base, HasInmateIndexKey):
 
 class Comment(Base, HasInmateIndexKey):
     """SQLAlchemy ORM model comments on a particular inmates.
+
+    It's useful to be able to store comments on inmates. These comments can
+    include whether an inmate is a mass requester or if they have a preferred
+    pronoun. In addition to the body of the comment, we also store the datetime
+    that the comment was made, and the author of the comment.
+
     """
 
     __tablename__ = 'comments'
@@ -342,6 +370,20 @@ class Comment(Base, HasInmateIndexKey):
 
 class Request(Base, HasInmateIndexKey):
     """SQLAlchemy ORM model for inmate package requests.
+
+    Receiving and processing requests for books is the bread and butter of the
+    IBP process. Requests take the form of letters. These letters arrive,
+    are read and processed by a volunteer, the inmate is looked up, and
+    these requests are either filled or tossed depending on the status of the
+    inmate. For example, if the inmate has requested more than once in a three
+    month period, the extra letters are tossed out.
+
+    The data here is designed to facilitate this process and store the results.
+    Specifically, we store the date that the request was processed, as well as
+    when the date was postmarked by USPS. Further, the action is stored.
+    Finally, if the package is filled, then the request can be attached to a
+    :py:class:`Shipment`.
+
     """
 
     __tablename__ = 'requests'
