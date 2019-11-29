@@ -1,21 +1,19 @@
+""":py:mod:`marshmallow` schemas for IBP models.
 """
-Schemas for models.
-"""
 
-from marshmallow import Schema, fields, pre_load, post_load
-
-from . import models
-
+from marshmallow import Schema, fields
 
 class UnitSchema(Schema):
-    """Schema for Unit model."""
+    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Unit`.
+    """
 
     name = fields.Str()
     url = fields.URL()
 
 
 class LookupSchema(Schema):
-    """Schema for Lookup model."""
+    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Lookup`.
+    """
 
     datetime = fields.DateTime()
 

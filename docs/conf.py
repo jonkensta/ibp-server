@@ -53,7 +53,7 @@ html_theme = 'alabaster'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = []
+html_static_path = ['static']
 
 autodoc_member_order = 'bysource'
 
@@ -61,5 +61,12 @@ intersphinx_mapping = {
     'Python': ('https://docs.python.org/3', None),
     'SQLAlchemy': ('https://docs.sqlalchemy.org/en/13/', None),
     'nameparser': ('https://nameparser.readthedocs.io/en/latest/', None),
+    'marshmallow': ('https://marshmallow.readthedocs.io/en/stable/', None),
     'Flask-SQLAlchemy': ('https://flask-sqlalchemy.palletsprojects.com/en/2.x/', None),
+}
+
+html_theme_options = {
+    "logo": "ibp_logo.jpg",
+    "description": ".. every prisoner has the right to quality reading and educational materials",
+    "description_font_style": "italic",
 }
