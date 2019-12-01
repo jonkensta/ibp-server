@@ -2,11 +2,9 @@ instance
 *.pyc
 __pycache__
 **.mypy_cache
+docs/build
 venv
 *.swp
 *.swo
 server.log
-node_modules
-package-lock.json
-npm-degug.log
 data.db
