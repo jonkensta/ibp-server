@@ -9,8 +9,8 @@ from . import models
 from . import schemas
 
 
-@ibp.app.route('/inmate/<jurisdiction>/<int:id_>', methods=['GET'])
-def get_inmate(jurisdiction, id_):
+@ibp.app.route('/inmate/<jurisdiction>/<int:id_>')
+def show_inmate(jurisdiction, id_):
     """:py:mod:`flask` view to handle a GET request for an inmate's info.
     """
 
@@ -20,13 +20,13 @@ def get_inmate(jurisdiction, id_):
     return {'inmate': result, 'errors': errors}
 
 
-@ibp.app.route('/inmates', methods=['GET'])
-def get_inmates():
+@ibp.app.route('/inmate')
+def show_inmates():
     """:py:mod:`flask` view to handle a GET request for an inmate search.
     """
 
     try:
-        search = flask.request.args['search']
+        search = flask.request.args['query']
     except KeyError:
         return {'message': "Search input must be provided"}, 400
 
