@@ -13,5 +13,6 @@ API
    :maxdepth: 2
    :caption: Contents:
 
+   views
    models
    schemas

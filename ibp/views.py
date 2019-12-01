@@ -1,5 +1,4 @@
-"""
-IBP views.
+""":py:mod:`flask` views for the IBP REST API.
 """
 
 import flask
@@ -10,9 +9,11 @@ from . import models
 from . import schemas
 
 
-@ibp.app.route('/inmate/<jurisdiction>/<int:id_>')
+@ibp.app.route('/inmate/<jurisdiction>/<int:id_>', methods=['GET'])
 def get_inmate(jurisdiction, id_):
-    """Handle a GET request for an inmate."""
+    """:py:mod:`flask` view to handle a GET request for an inmate's info.
+    """
+
     inmates, errors = models.Inmate.query.providers_by_id(id_)
     inmate = inmates.filter_by(jurisdiction=jurisdiction).first_or_404()
     result = schemas.inmate.dump(inmate)
@@ -21,7 +22,8 @@ def get_inmate(jurisdiction, id_):
 
 @ibp.app.route('/inmates', methods=['GET'])
 def get_inmates():
-    """Handle a GET request for an inmate search."""
+    """:py:mod:`flask` view to handle a GET request for an inmate search.
+    """
 
     try:
         search = flask.request.args['search']
