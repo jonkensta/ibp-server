@@ -2,8 +2,8 @@
 IBP webapp
 ##########
 
-Documentation for ibp webapp
-============================
+Documentation for IBP web server
+================================
 
 ***
 API
