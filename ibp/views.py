@@ -128,11 +128,11 @@ class InmateRequiredView(MethodView):
         :param inmate_id: Inmate numeric identifier.
         :type inmate_id: int
 
-        :param \*args: Generic args that are passed to parent method.
-        :type \*args: tuple
+        :param \\*args: Unnamed arguments that are passed to parent method.
+        :type \\*args: tuple
 
-        :param \**kwargs: Generic kwargs that are passed to parent method.
-        :type \**kwargs: dict
+        :param \\**kwargs: Generic kwargs that are passed to parent method.
+        :type \\**kwargs: dict
 
         :returns: :py:mod:`flask` response from appropriate web method handler.
 
