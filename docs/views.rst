@@ -10,10 +10,10 @@ Basic Views
 
 .. autofunction:: show_inmates
 
-:py:class:`MethodView` Subclasses
----------------------------------
+API Views
+---------
 
-.. autoclass:: InmateIndexView
+.. autoclass:: InmateRequiredView
     :members:
 
 .. autoclass:: RequestAPI

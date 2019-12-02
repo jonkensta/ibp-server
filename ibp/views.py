@@ -12,9 +12,9 @@ parameterized by the following:
 
 Here's a couple specific examples of using the API defined by these views:
 
-    - ``POST /comment/Texas/10000001/10``
+    - ``POST /comment/Texas/10000001``
 
-        Create new comment #10 of Texas inmate # 10000001.
+        Create new comment for Texas inmate # 10000001.
 
     - ``DELETE /request/Texas/88888888/3``
 
@@ -23,6 +23,15 @@ Here's a couple specific examples of using the API defined by these views:
     - ``GET /request/Federal/77777777/4``
 
         Get request #4 of Federal inmate # 77777777.
+
+    - ``PUT /request/Federal/77777777/4``
+
+        Update request #4 of Federal inmate # 77777777.
+
+With the final example of a PUT request, JSON data would need to be included as
+part of the HTTP header to include which fields are being updated. In the other
+cases, however, the parameters included in the endpoint URL are sufficient as
+inputs.
 
 """
 
@@ -39,6 +48,21 @@ from . import schemas
 @ibp.app.route('/inmate/<jurisdiction>/<int:inmate_id>')
 def show_inmate(jurisdiction, inmate_id):
     """:py:mod:`flask` view to handle a GET request for an inmate's info.
+
+    This :py:mod:`flask` view uses the following parameters extracted from the
+    endpoint URL:
+
+    :param jurisdiction: Political system that houses the inmate.
+    :type jurisdiction: str
+
+    :param inmate_id: Inmate numeric identifier.
+    :type inmate_id: int
+
+    :returns: :py:mod:`flask` JSON response containing the following fields:
+
+        - :py:data:`inmate` JSON encoding of the inmate information.
+        - :py:data:`errors` List of error strings encountered during lookup.
+
     """
 
     inmates, errors = models.Inmate.query.providers_by_id(inmate_id)
@@ -74,18 +98,18 @@ def show_inmates():
     return {'inmates': result, 'errors': errors}
 
 
-class InmateIndexView(MethodView):
-    """:py:class:`flask.views.MethodView` subclass for inmate + index views.
+class InmateRequiredView(MethodView):
+    """:py:class:`flask.views.MethodView` subclass given an inmate is required.
 
     This is a convenience subclass of :py:class:`flask.views.MethodView` for
     interfacing with APIs whose resources are accessed with an inmate's
-    information plus an index.
+    information plus some additional information (such as an index).
 
     This subclass overrides the
     :py:meth:`flask.views.MethodView.dispatch_request` method and translates
-    the `(jurisdiction, inmate_id, index)` arguments by finding the
+    the `(jurisdiction, inmate_id, *args, **kwargs)` arguments by finding the
     corresponding inmate, handling any corresponding errors, and finally
-    passing `(inmate, index)` to the parent method.
+    passing `(inmate, *args, **kwargs)` to the parent method.
 
     This interface translation provides some shared-code savings by saving each
     view method from having to do the inmate lookup and resultant error
@@ -95,7 +119,7 @@ class InmateIndexView(MethodView):
 
     # pylint: disable=arguments-differ
 
-    def dispatch_request(self, jurisdiction, inmate_id, index):
+    def dispatch_request(self, jurisdiction, inmate_id, *args, **kwargs):
         """:py:class:`flask.views.MethodView` override for interface translation.
 
         :param jurisdiction: Political system that houses the inmate.
@@ -104,20 +128,23 @@ class InmateIndexView(MethodView):
         :param inmate_id: Inmate numeric identifier.
         :type inmate_id: int
 
-        :param index: Index of the inmate-related resource.
-        :type index: int
+        :param \*args: Generic args that are passed to parent method.
+        :type \*args: tuple
 
-        :returns: :py:mod:`flask` response from appropriate method.
+        :param \**kwargs: Generic kwargs that are passed to parent method.
+        :type \**kwargs: dict
+
+        :returns: :py:mod:`flask` response from appropriate web method handler.
 
         """
         query = models.Inmate.query
         query = query.filter_by(jurisdiction=jurisdiction, id=inmate_id)
         inmate = query.first_or_404()
-        return super().dispatch_request(inmate, index)
+        return super().dispatch_request(inmate, *args, **kwargs)
 
 
-class RequestAPI(InmateIndexView):
-    """:py:class:`InmateIndexView` API for requests.
+class RequestAPI(InmateRequiredView):
+    """:py:class:`InmateRequiredView` API for requests.
     """
 
     # pylint: disable=no-self-use
@@ -126,7 +153,7 @@ class RequestAPI(InmateIndexView):
         """get a request"""
         return "handling a get request!111"
 
-    def post(self, inmate, index):
+    def post(self, inmate):
         """create a new request"""
         return "handling a post request!11"
 
@@ -139,14 +166,24 @@ class RequestAPI(InmateIndexView):
         return "updating a single reuqest"
 
 
+# pylint: disable=invalid-name
+request_view = RequestAPI.as_view('request')
+
 ibp.app.add_url_rule(
     '/request/<jurisdiction>/<int:inmate_id>/<int:index>',
-    view_func=RequestAPI.as_view('request')
+    view_func=request_view,
+    methods=['GET', 'DELETE', 'PUT']
+)
+
+ibp.app.add_url_rule(
+    '/request/<jurisdiction>/<int:inmate_id>',
+    view_func=request_view,
+    methods=['POST']
 )
 
 
-class CommentAPI(InmateIndexView):
-    """:py:class:`InmateIndexView` API for comments.
+class CommentAPI(InmateRequiredView):
+    """:py:class:`InmateRequiredView` API for comments.
     """
 
     # pylint: disable=no-self-use
@@ -155,7 +192,7 @@ class CommentAPI(InmateIndexView):
         """get a comment"""
         return "handling a get request!111"
 
-    def post(self, inmate, index):
+    def post(self, inmate):
         """create a new comment"""
         return "handling a post comment"
 
@@ -168,7 +205,17 @@ class CommentAPI(InmateIndexView):
         return "updating a single comment"
 
 
+# pylint: disable=invalid-name
+comment_view = CommentAPI.as_view('comment')
+
 ibp.app.add_url_rule(
     '/comment/<jurisdiction>/<int:inmate_id>/<int:index>',
-    view_func=CommentAPI.as_view('comment')
+    view_func=comment_view,
+    methods=['GET', 'DELETE', 'PUT']
+)
+
+ibp.app.add_url_rule(
+    '/comment/<jurisdiction>/<int:inmate_id>',
+    view_func=comment_view,
+    methods=['POST']
 )
