@@ -1,7 +1,30 @@
 """:py:mod:`flask` views for the IBP REST API.
-"""
 
-import functools
+The following :py:mod:`flask` views provide the HTTP endpoints that comprise
+the IBP `REST`_ API. The idea here being that a web frontend can issue requests
+to these endpoints to affect the state of the IBP database. These requests are
+parameterized by the following:
+
+    - The endpoint parameters encoded in the URL.
+    - The data parameters included in the request header i.e. JSON.
+
+.. _REST: https://en.wikipedia.org/wiki/Representational_state_transfer
+
+Here's a couple specific examples of using the API defined by these views:
+
+    - ``POST /comment/Texas/10000001/10``
+
+        Create new comment #10 of Texas inmate # 10000001.
+
+    - ``DELETE /request/Texas/88888888/3``
+
+        Delete request #3 of Texas inmate # 88888888.
+
+    - ``GET /request/Federal/77777777/4``
+
+        Get request #4 of Federal inmate # 77777777.
+
+"""
 
 import flask
 from flask.views import MethodView
@@ -74,6 +97,18 @@ class InmateIndexView(MethodView):
 
     def dispatch_request(self, jurisdiction, inmate_id, index):
         """:py:class:`flask.views.MethodView` override for interface translation.
+
+        :param jurisdiction: Political system that houses the inmate.
+        :type jurisdiction: str
+
+        :param inmate_id: Inmate numeric identifier.
+        :type inmate_id: int
+
+        :param index: Index of the inmate-related resource.
+        :type index: int
+
+        :returns: :py:mod:`flask` response from appropriate method.
+
         """
         query = models.Inmate.query
         query = query.filter_by(jurisdiction=jurisdiction, id=inmate_id)
