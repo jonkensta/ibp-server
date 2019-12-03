@@ -61,6 +61,7 @@ intersphinx_mapping = {
     'Python': ('https://docs.python.org/3', None),
     'SQLAlchemy': ('https://docs.sqlalchemy.org/en/13/', None),
     'Flask': ('https://flask.palletsprojects.com/en/1.1.x/', None),
+    'pymates': ('https://pymates.readthedocs.io/en/latest/', None),
     'nameparser': ('https://nameparser.readthedocs.io/en/latest/', None),
     'marshmallow': ('https://marshmallow.readthedocs.io/en/stable/', None),
     'Flask-SQLAlchemy': ('https://flask-sqlalchemy.palletsprojects.com/en/2.x/', None),

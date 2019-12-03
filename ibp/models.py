@@ -117,7 +117,7 @@ class InmateQuery(BaseQuery):
 
     These methods work as follows:
 
-        1) Query the providers with the given information.
+        1) Query using :py:mod:`pymates` with the given information.
         2) Record errors and store results in the :py:class:`Inmate` database.
         3) Query the :py:class:`Inmate` database with the given information.
         4) Return both the errors and results.
