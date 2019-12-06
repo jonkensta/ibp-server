@@ -205,6 +205,16 @@ class Inmate(Base):
 
     query_class = InmateQuery
 
+    # Primary key.
+
+    jurisdiction = Column(Jurisdiction, primary_key=True)
+    """Prison system holding the inmate."""
+
+    id = Column(Integer, primary_key=True)
+    """Inmate's numeric identifier as used in their jurisdiction."""
+
+    # Person-specific data.
+
     first_name = Column(String)
     """Inmate first name.
 
@@ -221,11 +231,19 @@ class Inmate(Base):
 
     """
 
-    jurisdiction = Column(Jurisdiction, primary_key=True)
-    """Prison system holding the inmate."""
+    sex = Column(String)
+    """Inmate gender as reported by provider."""
 
-    id = Column(Integer, primary_key=True)
-    """Inmate's numeric identifier as used in their jurisdiction."""
+    race = Column(String)
+    """Inmate race as reported by provider."""
+
+    # TDCJ-assigned fields.
+
+    url = Column(String)
+    """Inmate URL where their information is web accessible."""
+
+    release = Column(ReleaseDate)
+    """Date of when this inmate is set to be released."""
 
     unit_id = Column(Integer, ForeignKey('units.id'), default=None)
     """Foreign key into the table corresponding to :py:class:`Unit`.
@@ -237,17 +255,7 @@ class Inmate(Base):
     unit = relationship('Unit', uselist=False)
     """Prison unit holding the inmate."""
 
-    sex = Column(String)
-    """Inmate gender as reported by provider."""
-
-    url = Column(String)
-    """Inmate URL where their information is web accessible."""
-
-    race = Column(String)
-    """Inmate race as reported by provider."""
-
-    release = Column(ReleaseDate)
-    """Date of when this inmate is set to be released."""
+    # IBP-specific fields.
 
     datetime_fetched = Column(DateTime)
     """Datetime when inmate data was fetched from provider."""
