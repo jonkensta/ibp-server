@@ -1,5 +1,6 @@
 instance
 *.pyc
+.lvimrc
 __pycache__
 **.mypy_cache
 docs/build
