@@ -10,3 +10,4 @@ venv
 *.swo
 server.log
 data.db
+.ycm_extra_conf.py
