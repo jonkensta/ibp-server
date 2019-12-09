@@ -44,8 +44,8 @@ Base: typing.Any = ibp.db.Model  # typing.Any to suppress mypy errors.
 This is actually just an alias for the Model base class exposed by the
 :py:mod:`flask_sqlalchemy` plugin. However, we alias it as Base to support the
 possibility that might change the base class for our models down the road.
-This also seems to follow the naming :py:mod:`sqlalchemy` naming convention
-more closely.
+This also seems to follow the :py:mod:`sqlalchemy` naming convention more
+closely.
 
 """
 
