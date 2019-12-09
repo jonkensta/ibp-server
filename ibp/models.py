@@ -82,7 +82,6 @@ class ReleaseDate(String):
     # pylint: disable=unused-argument
     def result_processor(self, dialect, coltype):
         """Return result processor."""
-
         super_result_processor = super().result_processor(dialect, coltype)
 
         def identity(value):
@@ -100,7 +99,7 @@ class ReleaseDate(String):
 
 
 class InmateQuery(BaseQuery):
-    """Query class for supporting special inmate search methods.
+    r"""Query class for supporting special inmate search methods.
 
     When using the :py:mod:`flask_sqlalchemy` extension, queries are done using
     query objects that are attached to the model classes. This query object is
@@ -146,7 +145,6 @@ class InmateQuery(BaseQuery):
             - :py:data:`errors` is a list of error strings.
 
         """
-
         inmates, errors = pymates.query_by_inmate_id(id)
         inmates = map(Inmate.from_response, inmates)
 
@@ -172,7 +170,6 @@ class InmateQuery(BaseQuery):
             - :py:data:`errors` is a list of error strings.
 
         """
-
         inmates, errors = pymates.query_by_name(first_name, last_name)
         inmates = map(Inmate.from_response, inmates)
 
@@ -279,7 +276,6 @@ class Inmate(Base):
         :returns: Constructed :py:class:`Inmate` object.
 
         """
-
         kwargs = dict(response)
         kwargs["id"] = int(kwargs["id"].replace("-", ""))
         kwargs["unit"] = Unit.query.filter_by(name=kwargs["unit"]).first()
@@ -431,8 +427,7 @@ class Request(Base, HasInmateIndexKey):
 
 
 class Shipment(Base):
-    """SQLAlchemy ORM model for shipments made in response to requests.
-    """
+    """SQLAlchemy ORM model for shipments made in response to requests."""
 
     __tablename__ = "shipments"
 
@@ -469,8 +464,7 @@ class Shipment(Base):
 
 
 class Unit(Base):
-    """SQLAlchemy ORM model for prison units.
-    """
+    """SQLAlchemy ORM model for prison units."""
 
     __tablename__ = "units"
 

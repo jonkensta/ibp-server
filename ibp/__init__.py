@@ -1,6 +1,6 @@
-"""
-Initialize the Flask app.
-"""
+"""Initialize the Flask app."""
+
+# pylint: disable=invalid-name
 
 import os
 from configparser import SafeConfigParser

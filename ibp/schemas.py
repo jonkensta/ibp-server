@@ -20,8 +20,7 @@ from marshmallow import Schema, fields, validate
 
 
 class UnitSchema(Schema):
-    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Unit`.
-    """
+    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Unit`."""
 
     name = fields.Str()
     """Unit name encoded as a string."""
@@ -31,16 +30,14 @@ class UnitSchema(Schema):
 
 
 class LookupSchema(Schema):
-    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Lookup`.
-    """
+    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Lookup`."""
 
     datetime = fields.DateTime(required=True)
     """Datetime of the volunteer lookup for an inmate."""
 
 
 class CommentSchema(Schema):
-    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Comment`.
-    """
+    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Comment`."""
 
     index = fields.Int(dump_only=True)
     """Read-only auto-incrementing comment index."""
@@ -56,8 +53,7 @@ class CommentSchema(Schema):
 
 
 class RequestSchema(Schema):
-    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Request`.
-    """
+    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Request`."""
 
     index = fields.Int(dump_only=True)
     """Read-only auto-incrementing request index."""
@@ -70,8 +66,7 @@ class RequestSchema(Schema):
 
 
 class InmateSchema(Schema):
-    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Inmate`.
-    """
+    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Inmate`."""
 
     jurisdiction = fields.Str()
     id = fields.Int()
@@ -91,16 +86,13 @@ class InmateSchema(Schema):
 
 
 request = RequestSchema()
-"""Schema object for marshalling single :py:class:`ibp.models.Request` objects.
-"""
+"""Schema object for marshalling single :py:class:`ibp.models.Request` objects."""
 
 
 inmate = InmateSchema()
-"""Schema object for marshalling single :py:class:`ibp.models.Inmate` objects.
-"""
+"""Schema object for marshalling single :py:class:`ibp.models.Inmate` objects."""
 
 inmates = InmateSchema(
-    many=True, only=["jurisdiction", "id", "first_name", "last_name", "unit.name",]
+    many=True, only=["jurisdiction", "id", "first_name", "last_name", "unit.name"]
 )
-"""Schema object for marshalling multiple :py:class:`ibp.models.Inmate` objects.
-"""
+"""Schema object for marshalling multiple :py:class:`ibp.models.Inmate` objects."""

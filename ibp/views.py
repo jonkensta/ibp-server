@@ -64,7 +64,6 @@ def show_inmate(jurisdiction, inmate_id):
         - :py:data:`errors` List of error strings encountered during lookup.
 
     """
-
     inmates, errors = models.Inmate.query.providers_by_id(inmate_id)
     inmate = inmates.filter_by(jurisdiction=jurisdiction).first_or_404()
     result = schemas.inmate.dump(inmate)
@@ -73,8 +72,7 @@ def show_inmate(jurisdiction, inmate_id):
 
 @ibp.app.route("/inmate")
 def show_inmates():
-    """:py:mod:`flask` view to handle a GET request for an inmate search.
-    """
+    """:py:mod:`flask` view to handle a GET request for an inmate search."""
 
     try:
         search = flask.request.args["query"]
@@ -120,7 +118,7 @@ class InmateRequiredView(MethodView):
     # pylint: disable=arguments-differ
 
     def dispatch_request(self, jurisdiction, inmate_id, *args, **kwargs):
-        """:py:class:`flask.views.MethodView` override for interface translation.
+        r""":py:class:`flask.views.MethodView` override for interface translation.
 
         :param jurisdiction: Political system that houses the inmate.
         :type jurisdiction: str
@@ -128,11 +126,11 @@ class InmateRequiredView(MethodView):
         :param inmate_id: Inmate numeric identifier.
         :type inmate_id: int
 
-        :param \\*args: Unnamed arguments that are passed to parent method.
-        :type \\*args: tuple
+        :param \*args: Unnamed arguments that are passed to parent method.
+        :type \*args: tuple
 
-        :param \\**kwargs: Generic kwargs that are passed to parent method.
-        :type \\**kwargs: dict
+        :param \**kwargs: Generic kwargs that are passed to parent method.
+        :type \**kwargs: dict
 
         :returns: :py:mod:`flask` response from appropriate web method handler.
 
@@ -144,26 +142,25 @@ class InmateRequiredView(MethodView):
 
 
 class RequestAPI(InmateRequiredView):
-    """:py:class:`InmateRequiredView` API for requests.
-    """
+    """:py:class:`InmateRequiredView` API for requests."""
 
-    # pylint: disable=no-self-use
+    # pylint: disable=no-self-use, unused-argument
 
     def get(self, inmate, index):
-        """get a request"""
+        """Get a request."""
         return "handling a get request!111"
 
     def post(self, inmate):
-        """create a new request"""
+        """Create a new request."""
         return "handling a post request!11"
 
     def delete(self, inmate, index):
-        """delete a request"""
+        """Delete a request."""
         return "deleting a request"
 
     def put(self, inmate, index):
-        """update a single request"""
-        return "updating a single reuqest"
+        """Update a single request."""
+        return "updating a single request"
 
 
 # pylint: disable=invalid-name
@@ -181,25 +178,24 @@ ibp.app.add_url_rule(
 
 
 class CommentAPI(InmateRequiredView):
-    """:py:class:`InmateRequiredView` API for comments.
-    """
+    """:py:class:`InmateRequiredView` API for comments."""
 
-    # pylint: disable=no-self-use
+    # pylint: disable=no-self-use, unused-argument
 
     def get(self, inmate, index):
-        """get a comment"""
+        """Get a comment."""
         return "handling a get request!111"
 
     def post(self, inmate):
-        """create a new comment"""
+        """Create a new comment."""
         return "handling a post comment"
 
     def delete(self, inmate, index):
-        """delete a comment"""
+        """Delete a comment."""
         return "deleting a comment"
 
     def put(self, inmate, index):
-        """update a single comment"""
+        """Update a single comment."""
         return "updating a single comment"
 
 
