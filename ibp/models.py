@@ -359,8 +359,6 @@ class Comment(Base, HasInmateIndexKey):
 
     """
 
-    # This is a test of Oliver's patience.
-
     __tablename__ = "comments"
 
     datetime = Column(DateTime, nullable=False)
