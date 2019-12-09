@@ -1,4 +1,5 @@
 instance
+.flake8
 *.pyc
 .lvimrc
 __pycache__
