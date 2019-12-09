@@ -41,5 +41,6 @@ db.Model.metadata.naming_convention = {
 
 CORS(app)
 
+# flake8: noqa
 import ibp.views  # pylint: disable=wrong-import-position
 import ibp.models  # pylint: disable=wrong-import-position
