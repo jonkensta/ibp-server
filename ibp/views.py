@@ -45,7 +45,7 @@ from . import models
 from . import schemas
 
 
-@ibp.app.route('/inmate/<jurisdiction>/<int:inmate_id>')
+@ibp.app.route("/inmate/<jurisdiction>/<int:inmate_id>")
 def show_inmate(jurisdiction, inmate_id):
     """:py:mod:`flask` view to handle a GET request for an inmate's info.
 
@@ -68,26 +68,26 @@ def show_inmate(jurisdiction, inmate_id):
     inmates, errors = models.Inmate.query.providers_by_id(inmate_id)
     inmate = inmates.filter_by(jurisdiction=jurisdiction).first_or_404()
     result = schemas.inmate.dump(inmate)
-    return {'inmate': result, 'errors': errors}
+    return {"inmate": result, "errors": errors}
 
 
-@ibp.app.route('/inmate')
+@ibp.app.route("/inmate")
 def show_inmates():
     """:py:mod:`flask` view to handle a GET request for an inmate search.
     """
 
     try:
-        search = flask.request.args['query']
+        search = flask.request.args["query"]
     except KeyError:
-        return {'message': "Search input must be provided"}, 400
+        return {"message": "Search input must be provided"}, 400
 
     if not search:
-        return {'message': "Some search input must be provided"}, 400
+        return {"message": "Some search input must be provided"}, 400
 
     query = models.Inmate.query
 
     try:
-        inmate_id = int(search.replace('-', ''))
+        inmate_id = int(search.replace("-", ""))
         inmates, errors = query.providers_by_id(inmate_id)
 
     except ValueError:
@@ -95,7 +95,7 @@ def show_inmates():
         inmates, errors = query.providers_by_name(name.first, name.last)
 
     result = schemas.inmates.dump(inmates)
-    return {'inmates': result, 'errors': errors}
+    return {"inmates": result, "errors": errors}
 
 
 class InmateRequiredView(MethodView):
@@ -167,18 +167,16 @@ class RequestAPI(InmateRequiredView):
 
 
 # pylint: disable=invalid-name
-request_view = RequestAPI.as_view('request')
+request_view = RequestAPI.as_view("request")
 
 ibp.app.add_url_rule(
-    '/request/<jurisdiction>/<int:inmate_id>/<int:index>',
+    "/request/<jurisdiction>/<int:inmate_id>/<int:index>",
     view_func=request_view,
-    methods=['GET', 'DELETE', 'PUT']
+    methods=["GET", "DELETE", "PUT"],
 )
 
 ibp.app.add_url_rule(
-    '/request/<jurisdiction>/<int:inmate_id>',
-    view_func=request_view,
-    methods=['POST']
+    "/request/<jurisdiction>/<int:inmate_id>", view_func=request_view, methods=["POST"]
 )
 
 
@@ -206,16 +204,14 @@ class CommentAPI(InmateRequiredView):
 
 
 # pylint: disable=invalid-name
-comment_view = CommentAPI.as_view('comment')
+comment_view = CommentAPI.as_view("comment")
 
 ibp.app.add_url_rule(
-    '/comment/<jurisdiction>/<int:inmate_id>/<int:index>',
+    "/comment/<jurisdiction>/<int:inmate_id>/<int:index>",
     view_func=comment_view,
-    methods=['GET', 'DELETE', 'PUT']
+    methods=["GET", "DELETE", "PUT"],
 )
 
 ibp.app.add_url_rule(
-    '/comment/<jurisdiction>/<int:inmate_id>',
-    view_func=comment_view,
-    methods=['POST']
+    "/comment/<jurisdiction>/<int:inmate_id>", view_func=comment_view, methods=["POST"]
 )

@@ -26,9 +26,7 @@ anywhere else apart from here.
 import typing
 
 import sqlalchemy
-from sqlalchemy import (
-    Column, Enum, Text, Integer, String, DateTime, Date, ForeignKey
-)
+from sqlalchemy import Column, Enum, Text, Integer, String, DateTime, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.processors import str_to_date
 from sqlalchemy.schema import ForeignKeyConstraint
@@ -51,7 +49,7 @@ more closely.
 
 """
 
-Jurisdiction = Enum('Texas', 'Federal', name='jurisdiction_enum')
+Jurisdiction = Enum("Texas", "Federal", name="jurisdiction_enum")
 """Alias for inmate jurisdiction :py:class:`sqlalchemy.types.Enum`.
 
 Columns of this type store the jurisdiction level of the inmate.
@@ -201,7 +199,7 @@ class Inmate(Base):
 
     """
 
-    __tablename__ = 'inmates'
+    __tablename__ = "inmates"
 
     query_class = InmateQuery
 
@@ -245,14 +243,14 @@ class Inmate(Base):
     release = Column(ReleaseDate)
     """Date of when this inmate is set to be released."""
 
-    unit_id = Column(Integer, ForeignKey('units.id'), default=None)
+    unit_id = Column(Integer, ForeignKey("units.id"), default=None)
     """Foreign key into the table corresponding to :py:class:`Unit`.
 
     Only used to resolve the relationship to :py:class:`Unit`.
 
     """
 
-    unit = relationship('Unit', uselist=False)
+    unit = relationship("Unit", uselist=False)
     """Prison unit holding the inmate."""
 
     # IBP-specific fields.
@@ -260,13 +258,13 @@ class Inmate(Base):
     datetime_fetched = Column(DateTime)
     """Datetime when inmate data was fetched from provider."""
 
-    lookups = relationship('Lookup', order_by='desc(Lookup.datetime)')
+    lookups = relationship("Lookup", order_by="desc(Lookup.datetime)")
     """List of lookups performed on this inmate by IBP volunteers."""
 
-    comments = relationship('Comment', order_by="desc(Comment.datetime)")
+    comments = relationship("Comment", order_by="desc(Comment.datetime)")
     """List of comments on this inmate made by IBP volunteers."""
 
-    requests = relationship('Request', order_by="desc(Request.date_postmarked)")
+    requests = relationship("Request", order_by="desc(Request.date_postmarked)")
     """List of requests made by this inmate."""
 
     @classmethod
@@ -283,8 +281,8 @@ class Inmate(Base):
         """
 
         kwargs = dict(response)
-        kwargs['id'] = int(kwargs['id'].replace('-', ''))
-        kwargs['unit'] = Unit.query.filter_by(name=kwargs['unit']).first()
+        kwargs["id"] = int(kwargs["id"].replace("-", ""))
+        kwargs["unit"] = Unit.query.filter_by(name=kwargs["unit"]).first()
         return Inmate(**kwargs)
 
 
@@ -311,6 +309,7 @@ class HasInmateIndexKey:
     into the table corresponding to the :py:class:`Inmate` model.
 
     """
+
     # pylint: disable=no-self-argument, no-self-use
 
     @declared_attr
@@ -318,8 +317,8 @@ class HasInmateIndexKey:
         """Declare ForeignKeyConstraint attribute into inmates table."""
         return (
             ForeignKeyConstraint(
-                ['inmate_jurisdiction', 'inmate_id'],
-                ['inmates.jurisdiction', 'inmates.id'],
+                ["inmate_jurisdiction", "inmate_id"],
+                ["inmates.jurisdiction", "inmates.id"],
             ),
         )
 
@@ -348,7 +347,7 @@ class Lookup(Base, HasInmateIndexKey):
 
     """
 
-    __tablename__ = 'lookups'
+    __tablename__ = "lookups"
 
     datetime = Column(DateTime, nullable=False)
     """Datetime of when the inmate lookup was performed."""
@@ -364,7 +363,9 @@ class Comment(Base, HasInmateIndexKey):
 
     """
 
-    __tablename__ = 'comments'
+    # This is a test of Oliver's patience.
+
+    __tablename__ = "comments"
 
     datetime = Column(DateTime, nullable=False)
     """Datetime of when the comment was made."""
@@ -394,7 +395,7 @@ class Request(Base, HasInmateIndexKey):
 
     """
 
-    __tablename__ = 'requests'
+    __tablename__ = "requests"
 
     date_processed = Column(Date, nullable=False)
     """Date that the request was processed by a volunteer."""
@@ -402,7 +403,7 @@ class Request(Base, HasInmateIndexKey):
     date_postmarked = Column(Date, nullable=False)
     """Date that the request was postmarked by the mail service."""
 
-    Action = Enum('Filled', 'Tossed', name='action_enum')
+    Action = Enum("Filled", "Tossed", name="action_enum")
     """Alias for request action :py:class:`sqlalchemy.types.Enum`.
 
     Available actions right now are 'Filled' and 'Tossed':
@@ -415,17 +416,17 @@ class Request(Base, HasInmateIndexKey):
     action = Column(Action, nullable=False)
     """Action taken by the IBP volunteer in response to the request."""
 
-    inmate = relationship('Inmate', uselist=False)
+    inmate = relationship("Inmate", uselist=False)
     """Inmate that sent the request."""
 
-    shipment_id = Column(Integer, ForeignKey('shipments.id'))
+    shipment_id = Column(Integer, ForeignKey("shipments.id"))
     """Foreign key into the table corresponding to :py:class:`Shipment`.
 
     Only used to resolve the relationship to :py:class:`Shipment`.
 
     """
 
-    shipment = relationship('Shipment', uselist=False)
+    shipment = relationship("Shipment", uselist=False)
     """Shipment containing this request's corresponding package."""
 
 
@@ -433,7 +434,7 @@ class Shipment(Base):
     """SQLAlchemy ORM model for shipments made in response to requests.
     """
 
-    __tablename__ = 'shipments'
+    __tablename__ = "shipments"
 
     id = Column(Integer, primary_key=True)
     """Auto-incrementing identifier to serve as primary key."""
@@ -453,17 +454,17 @@ class Shipment(Base):
     postage = Column(Integer, nullable=False)
     """Postage of the shipment in US cents."""
 
-    requests = relationship('Request')
+    requests = relationship("Request")
     """Lists of requests this shipment responds to."""
 
-    unit_id = Column(Integer, ForeignKey('units.id'), default=None)
+    unit_id = Column(Integer, ForeignKey("units.id"), default=None)
     """Foreign key into the table corresponding to :py:class:`Unit`.
 
     Only used to resolve the relationship to :py:class:`Unit`.
 
     """
 
-    unit = relationship('Unit', uselist=False)
+    unit = relationship("Unit", uselist=False)
     """Unit that this shipment was sent to."""
 
 
@@ -471,7 +472,7 @@ class Unit(Base):
     """SQLAlchemy ORM model for prison units.
     """
 
-    __tablename__ = 'units'
+    __tablename__ = "units"
 
     id = Column(Integer, primary_key=True)
     """Auto-incrementing identifier to serve as primary key."""
@@ -500,7 +501,7 @@ class Unit(Base):
     jurisdiction = Column(Jurisdiction)
     """Jurisdiction of the prison unit."""
 
-    ShippingMethod = Enum('Box', 'Individual', name='shipping_enum')
+    ShippingMethod = Enum("Box", "Individual", name="shipping_enum")
     """Alias for shipping method :py:class:`sqlalchemy.types.Enum`.
 
     Available shipping methods right now are 'Box' and 'Individual':
@@ -513,8 +514,8 @@ class Unit(Base):
     shipping_method = Column(ShippingMethod)
     """Shipping method to use for this prison unit."""
 
-    inmates = relationship('Inmate')
+    inmates = relationship("Inmate")
     """List of inmates residing in this prison unit."""
 
-    shipments = relationship('Shipment')
+    shipments = relationship("Shipment")
     """List of shipments made to this prison unit."""

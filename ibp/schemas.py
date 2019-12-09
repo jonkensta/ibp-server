@@ -45,19 +45,13 @@ class CommentSchema(Schema):
     index = fields.Int(dump_only=True)
     """Read-only auto-incrementing comment index."""
 
-    datetime = fields.DateTime(
-        required=True
-    )
+    datetime = fields.DateTime(required=True)
     """Datetime of when the comment was made."""
 
-    author = fields.Str(
-        validate=validate.Length(min=1), required=True
-    )
+    author = fields.Str(validate=validate.Length(min=1), required=True)
     """Author of the comment."""
 
-    body = fields.Str(
-        validate=validate.Length(min=1), required=True
-    )
+    body = fields.Str(validate=validate.Length(min=1), required=True)
     """Body of the comment."""
 
 
@@ -71,9 +65,7 @@ class RequestSchema(Schema):
     date_postmarked = fields.Date()
     """USPS postmarkdate of the accompanying letter."""
 
-    action = fields.Str(
-        validate=validate.OneOf(["Tossed", "Filled"]), required=True
-    )
+    action = fields.Str(validate=validate.OneOf(["Tossed", "Filled"]), required=True)
     """Action taken on the corresponding request."""
 
 
@@ -92,7 +84,7 @@ class InmateSchema(Schema):
     race = fields.Str()
     release = fields.Str()
 
-    unit = fields.Nested(UnitSchema, only=['name', 'url'])
+    unit = fields.Nested(UnitSchema, only=["name", "url"])
     lookups = fields.Nested(LookupSchema, many=True)
     comments = fields.Nested(CommentSchema, many=True)
     requests = fields.Nested(RequestSchema, many=True)
@@ -108,14 +100,7 @@ inmate = InmateSchema()
 """
 
 inmates = InmateSchema(
-    many=True,
-    only=[
-        'jurisdiction',
-        'id',
-        'first_name',
-        'last_name',
-        'unit.name',
-    ]
+    many=True, only=["jurisdiction", "id", "first_name", "last_name", "unit.name",]
 )
 """Schema object for marshalling multiple :py:class:`ibp.models.Inmate` objects.
 """
