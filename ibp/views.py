@@ -73,7 +73,6 @@ def show_inmate(jurisdiction, inmate_id):
 @ibp.app.route("/inmate")
 def show_inmates():
     """:py:mod:`flask` view to handle a GET request for an inmate search."""
-
     try:
         search = flask.request.args["query"]
     except KeyError:
