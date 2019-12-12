@@ -41,6 +41,7 @@ from flask.views import MethodView
 import nameparser
 
 import ibp
+from . import misc
 from . import models
 from . import schemas
 
@@ -179,15 +180,16 @@ ibp.app.add_url_rule(
 class CommentAPI(InmateRequiredView):
     """:py:class:`InmateRequiredView` API for comments."""
 
-    # pylint: disable=no-self-use, unused-argument
-
-    def get(self, inmate, index):
-        """Get a comment."""
-        return "handling a get request!111"
+    # pylint: disable=no-self-use, unused-argument, no-member
 
     def post(self, inmate):
         """Create a new comment."""
-        return "handling a post comment"
+        comment = schemas.comment.load(flask.request.json)
+        comment.index = next(misc.available_indices(inmate.comments))
+        inmate.comments.append(comment)
+        ibp.db.session.add(comment)
+        ibp.db.session.commit()
+        return schemas.comment.dump(comment)
 
     def delete(self, inmate, index):
         """Delete a comment."""

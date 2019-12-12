@@ -16,7 +16,9 @@ instantiate anything.
 
 # pylint: disable=invalid-name
 
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, post_load
+
+from . import models
 
 
 class UnitSchema(Schema):
@@ -50,6 +52,12 @@ class CommentSchema(Schema):
 
     body = fields.Str(validate=validate.Length(min=1), required=True)
     """Body of the comment."""
+
+    # pylint: disable=no-self-use, unused-argument
+    @post_load
+    def make_comment(self, data, **kwargs):
+        """Construct :py:class:`ibp.models.Comment` object after load."""
+        return models.Comment(**data)
 
 
 class RequestSchema(Schema):
@@ -88,6 +96,8 @@ class InmateSchema(Schema):
 request = RequestSchema()
 """Schema object for marshalling single :py:class:`ibp.models.Request` objects."""
 
+comment = CommentSchema()
+"""Schema object for marshalling single :py:class:`ibp.models.Comment` objects."""
 
 inmate = InmateSchema()
 """Schema object for marshalling single :py:class:`ibp.models.Inmate` objects."""
