@@ -16,9 +16,7 @@ instantiate anything.
 
 # pylint: disable=invalid-name
 
-from marshmallow import Schema, fields, validate, post_load
-
-from . import models
+from marshmallow import Schema, fields, validate
 
 
 class UnitSchema(Schema):
@@ -44,7 +42,7 @@ class CommentSchema(Schema):
     index = fields.Int(dump_only=True)
     """Read-only auto-incrementing comment index."""
 
-    datetime = fields.DateTime(required=True)
+    datetime = fields.DateTime(dump_only=True)
     """Datetime of when the comment was made."""
 
     author = fields.Str(validate=validate.Length(min=1), required=True)
@@ -53,12 +51,6 @@ class CommentSchema(Schema):
     body = fields.Str(validate=validate.Length(min=1), required=True)
     """Body of the comment."""
 
-    # pylint: disable=no-self-use, unused-argument
-    @post_load
-    def make_comment(self, data, **kwargs):
-        """Construct :py:class:`ibp.models.Comment` object after load."""
-        return models.Comment(**data)
-
 
 class RequestSchema(Schema):
     """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Request`."""
@@ -66,7 +58,7 @@ class RequestSchema(Schema):
     index = fields.Int(dump_only=True)
     """Read-only auto-incrementing request index."""
 
-    date_postmarked = fields.Date()
+    date_postmarked = fields.DateTime(required=True)
     """USPS postmarkdate of the accompanying letter."""
 
     action = fields.Str(validate=validate.OneOf(["Tossed", "Filled"]), required=True)
@@ -93,10 +85,10 @@ class InmateSchema(Schema):
     requests = fields.Nested(RequestSchema, many=True)
 
 
-request = RequestSchema()
+request = RequestSchema(unknown="EXCLUDE")
 """Schema object for marshalling single :py:class:`ibp.models.Request` objects."""
 
-comment = CommentSchema()
+comment = CommentSchema(unknown="EXCLUDE")
 """Schema object for marshalling single :py:class:`ibp.models.Comment` objects."""
 
 inmate = InmateSchema()

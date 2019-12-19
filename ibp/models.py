@@ -49,6 +49,21 @@ closely.
 
 """
 
+
+def update_from_kwargs(self, **kwargs):
+    """Update a model object from given keyword arguments."""
+    for key, value in kwargs.items():
+        if hasattr(self, key):
+            setattr(self, key, value)
+        else:
+            msg = f"'{self.__class__}' has no attribute named '{key}'"
+            raise AttributeError(msg)
+
+
+# Add update_from_kwargs method to Base to provide to all model objects.
+Base.update_from_kwargs = update_from_kwargs
+
+
 Jurisdiction = Enum("Texas", "Federal", name="jurisdiction_enum")
 """Alias for inmate jurisdiction :py:class:`sqlalchemy.types.Enum`.
 
