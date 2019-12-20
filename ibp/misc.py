@@ -4,7 +4,7 @@ import typing
 import itertools
 
 
-def get_next_available_index(indices: typing.List[int]) -> int:
+def get_next_available_index(indices: typing.Iterable[int]) -> int:
     """Get next available index from an iterable of indices."""
     used_indices = sorted(indices)
     enumerated = itertools.zip_longest(itertools.count(), used_indices)
