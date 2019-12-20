@@ -1,11 +1,12 @@
 """Miscellaneous utility functions."""
 
+import typing
 import itertools
 
 
-def get_next_available_index(items):
-    """Get next available index from a set of items."""
-    used_indices = sorted(item.index for item in items)
+def get_next_available_index(indices: typing.List[int]) -> int:
+    """Get next available index from an iterable of indices."""
+    used_indices = sorted(indices)
     enumerated = itertools.zip_longest(itertools.count(), used_indices)
     return next(
         index

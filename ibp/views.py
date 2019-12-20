@@ -141,7 +141,7 @@ def post_request(inmate):
         print(exc.messages)
         return {"message": exc.messages}, 400
 
-    index = misc.get_next_available_index(inmate.requests)
+    index = misc.get_next_available_index(item.index for item in inmate.requests)
     request = models.Request(index=index, date_processed=date.today(), **fields)
     inmate.requests.append(request)
     ibp.db.session.add(request)
@@ -182,7 +182,7 @@ def post_comment(inmate):
     except marshmallow.exceptions.ValidationError as exc:
         return {"message": exc.messages}, 400
 
-    index = misc.get_next_available_index(inmate.comments)
+    index = misc.get_next_available_index(item.index for item in inmate.comments)
     comment = models.Comment(index=index, datetime=datetime.now(), **fields)
     inmate.comments.append(comment)
     ibp.db.session.add(comment)
