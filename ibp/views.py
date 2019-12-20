@@ -135,10 +135,8 @@ def show_inmates():
 def post_request(inmate):
     """Create a request."""
     try:
-        print(flask.request.json)
         fields = schemas.request.load(flask.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        print(exc.messages)
         return {"message": exc.messages}, 400
 
     index = misc.get_next_available_index(item.index for item in inmate.requests)
