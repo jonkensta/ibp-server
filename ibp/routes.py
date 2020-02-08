@@ -1,6 +1,6 @@
 """:py:mod:`bottle` routes for the IBP REST API.
 
-The following :py:mod:`bottle` views provide the HTTP endpoints that comprise
+The following :py:mod:`bottle` routes provide the HTTP endpoints that comprise
 the IBP `REST`_ API. The idea here being that a web frontend can issue requests
 to these endpoints to affect the state of the IBP database. These requests are
 parameterized by the following:
@@ -10,7 +10,7 @@ parameterized by the following:
 
 .. _REST: https://en.wikipedia.org/wiki/Representational_state_transfer
 
-Here's a couple specific examples of using the API defined by these views:
+Here's a couple specific examples of using the API defined by these routes:
 
     - ``POST /comment/Texas/10000001``
 
@@ -141,9 +141,9 @@ def load_cls_from_url_params(cls):
 @app.get("/inmate/<jurisdiction>/<inmate_id:int>")
 @load_inmate_from_url_params
 def show_inmate(session, inmate):  # pylint: disable=unused-argument
-    """:py:mod:`bottle` view to handle a GET request for an inmate's info.
+    """:py:mod:`bottle` route to handle a GET request for an inmate's info.
 
-    This :py:mod:`bottle` view uses the following parameters extracted from the
+    This :py:mod:`bottle` route uses the following parameters extracted from the
     endpoint URL:
 
     :param jurisdiction: Political system that houses the inmate.
@@ -163,7 +163,7 @@ def show_inmate(session, inmate):  # pylint: disable=unused-argument
 
 @app.get("/inmate")
 def show_inmates(session):
-    """:py:mod:`bottle` view to handle a GET request for an inmate search."""
+    """:py:mod:`bottle` route to handle a GET request for an inmate search."""
     try:
         search = bottle.request.get("query")
     except KeyError:
