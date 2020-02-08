@@ -31,7 +31,4 @@ Column Types
 
 Utility Types
 -------------
-.. autoclass:: InmateQuery
-    :members:
-
 .. autoclass:: HasInmateIndexKey

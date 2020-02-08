@@ -1,3 +1,3 @@
 """Initialize the Bottle app."""
 
-from .base import app, views, models
+from .base import app, models, routes

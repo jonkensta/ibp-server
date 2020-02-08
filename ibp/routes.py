@@ -1,6 +1,6 @@
-""":py:mod:`flask` views for the IBP REST API.
+""":py:mod:`bottle` routes for the IBP REST API.
 
-The following :py:mod:`flask` views provide the HTTP endpoints that comprise
+The following :py:mod:`bottle` views provide the HTTP endpoints that comprise
 the IBP `REST`_ API. The idea here being that a web frontend can issue requests
 to these endpoints to affect the state of the IBP database. These requests are
 parameterized by the following:
@@ -141,9 +141,9 @@ def load_cls_from_url_params(cls):
 @app.get("/inmate/<jurisdiction>/<inmate_id:int>")
 @load_inmate_from_url_params
 def show_inmate(session, inmate):  # pylint: disable=unused-argument
-    """:py:mod:`flask` view to handle a GET request for an inmate's info.
+    """:py:mod:`bottle` view to handle a GET request for an inmate's info.
 
-    This :py:mod:`flask` view uses the following parameters extracted from the
+    This :py:mod:`bottle` view uses the following parameters extracted from the
     endpoint URL:
 
     :param jurisdiction: Political system that houses the inmate.
@@ -152,7 +152,7 @@ def show_inmate(session, inmate):  # pylint: disable=unused-argument
     :param inmate_id: Inmate numeric identifier.
     :type inmate_id: int
 
-    :returns: :py:mod:`flask` JSON response containing the following fields:
+    :returns: :py:mod:`bottle` JSON response containing the following fields:
 
         - :py:data:`inmate` JSON encoding of the inmate information.
         - :py:data:`errors` List of error strings encountered during lookup.
@@ -163,7 +163,7 @@ def show_inmate(session, inmate):  # pylint: disable=unused-argument
 
 @app.get("/inmate")
 def show_inmates(session):
-    """:py:mod:`flask` view to handle a GET request for an inmate search."""
+    """:py:mod:`bottle` view to handle a GET request for an inmate search."""
     try:
         search = bottle.request.get("query")
     except KeyError:
