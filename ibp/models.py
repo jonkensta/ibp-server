@@ -13,7 +13,6 @@ database. These relate to the day-to-day IBP logistics, including:
 In addition to the models, this module also defines a few convenience items:
 
     * Special column types :py:data:`Jurisdiction`, :py:class:`ReleaseDate`
-    * Query class :py:class:`InmateQuery` for extra :py:class:`Inmate` query methods.
     * Inmate foreign-key mix-in :py:class:`HasInmateIndexKey`
 
 These utility items are exported and documented but should not likely be used
@@ -30,24 +29,18 @@ from sqlalchemy import Column, Enum, Text, Integer, String, DateTime, Date, Fore
 from sqlalchemy.orm import relationship
 from sqlalchemy.processors import str_to_date
 from sqlalchemy.schema import ForeignKeyConstraint
-from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.declarative import declared_attr, declarative_base
 
-from flask_sqlalchemy import BaseQuery
+Base: typing.Any = declarative_base()
+"""Base class for :py:mod:`sqlalchemy` models."""
 
-import pymates
-
-import ibp
-
-Base: typing.Any = ibp.db.Model  # typing.Any to suppress mypy errors.
-"""Base class for :py:mod:`sqlalchemy` models.
-
-This is actually just an alias for the Model base class exposed by the
-:py:mod:`flask_sqlalchemy` plugin. However, we alias it as Base to support the
-possibility that might change the base class for our models down the road.
-This also seems to follow the :py:mod:`sqlalchemy` naming convention more
-closely.
-
-"""
+Base.metadata.naming_convention = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
 
 
 def update_from_kwargs(self, **kwargs):
@@ -113,92 +106,6 @@ class ReleaseDate(String):
         return process
 
 
-class InmateQuery(BaseQuery):
-    r"""Query class for supporting special inmate search methods.
-
-    When using the :py:mod:`flask_sqlalchemy` extension, queries are done using
-    query objects that are attached to the model classes. This query object is
-    of type :py:data:`query_class`, a variable that can be attached to the
-    model class to customize query objects for a particular model.
-
-    In short, this class customizes the query object of our :py:class:`Inmate`
-    model by adding the following extra query methods:
-
-        - :py:meth:`providers_by_id` - query providers with an inmate ID.
-        - :py:meth:`providers_by_name` - query providers with an inmate name.
-
-    These methods work as follows:
-
-        1) Query using :py:mod:`pymates` with the given information.
-        2) Record errors and store results in the :py:class:`Inmate` database.
-        3) Query the :py:class:`Inmate` database with the given information.
-        4) Return both the errors and results.
-
-    While these steps may seem redundant, they are intentional: The first two
-    steps update the data in the local database, and the last two steps return
-    what data is available regardless. In this regard, the local database
-    operates as something of a backup cache that updates the data when it can.
-
-    :note: See `Flask-SQLAlchemy query classes`_ for additional details.
-
-    .. _Flask-SQLAlchemy query classes: \
-            https://flask-sqlalchemy.palletsprojects.com/\
-            /en/2.x/customizing/#query-class
-
-    """
-
-    # pylint: disable=redefined-builtin
-    def providers_by_id(self, id):
-        """Query inmate providers with an inmate ID.
-
-        :param id: Inmate TDCJ or FBOP ID to search.
-        :type id: int
-
-        :returns: tuple of (:py:data:`inmates`, :py:data:`errors`) where
-
-            - :py:data:`inmates` is a QueryResult for the inmate search.
-            - :py:data:`errors` is a list of error strings.
-
-        """
-        inmates, errors = pymates.query_by_inmate_id(id)
-        inmates = map(Inmate.from_response, inmates)
-
-        with self.session.begin_nested():
-            for inmate in inmates:
-                self.session.merge(inmate)
-
-        inmates = self.filter_by(id=id)
-        return inmates, errors
-
-    def providers_by_name(self, first_name, last_name):
-        """Query inmate providers with an inmate ID.
-
-        :param first_name: Inmate first name to search.
-        :type first_name: str
-
-        :param last_name: Inmate last name to search.
-        :type last_name: str
-
-        :returns: tuple of (:py:data:`inmates`, :py:data:`errors`) where
-
-            - :py:data:`inmates` is a QueryResult for the inmate search.
-            - :py:data:`errors` is a list of error strings.
-
-        """
-        inmates, errors = pymates.query_by_name(first_name, last_name)
-        inmates = map(Inmate.from_response, inmates)
-
-        with self.session.begin_nested():
-            for inmate in inmates:
-                self.session.merge(inmate)
-
-        tolower = sqlalchemy.func.lower
-        inmates = self.filter(tolower(Inmate.last_name) == tolower(last_name))
-        inmates = inmates.filter(Inmate.first_name.ilike(first_name + "%"))
-
-        return inmates, errors
-
-
 class Inmate(Base):
     """SQLAlchemy ORM model for inmate data.
 
@@ -206,14 +113,9 @@ class Inmate(Base):
     Further, it maintains associations with other types of inmate data, such as
     inmate requests and the unit where the inmate is located.
 
-    :note: This model uses the :py:class:`InmateQuery` class as the type of its
-           query object. This query type exposes additional query methods.
-
     """
 
     __tablename__ = "inmates"
-
-    query_class = InmateQuery
 
     # Primary key.
 
@@ -280,12 +182,13 @@ class Inmate(Base):
     """List of requests made by this inmate."""
 
     @classmethod
-    def from_response(cls, response):
+    def from_response(cls, session, response):
         """Construct a :py:class:`Inmate` object from `pymates` response.
 
         This is a convenience classmethod for constructing Inmate objects from
         provider responses.
 
+        :param session: Current sqlalchemy session.
         :param response: Response from inmate data provider.
 
         :returns: Constructed :py:class:`Inmate` object.
@@ -293,7 +196,7 @@ class Inmate(Base):
         """
         kwargs = dict(response)
         kwargs["id"] = int(kwargs["id"].replace("-", ""))
-        kwargs["unit"] = Unit.query.filter_by(name=kwargs["unit"]).first()
+        kwargs["unit"] = session.query(Unit).filter_by(name=kwargs["unit"]).first()
         return Inmate(**kwargs)
 
 

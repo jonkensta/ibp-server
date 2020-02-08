@@ -37,54 +37,110 @@ as inputs.
 
 # pylint: disable=no-member
 
+import json
 import functools
 from datetime import date, datetime
 
-import flask
+import bottle
 import nameparser
+import sqlalchemy
 import marshmallow
 
-import ibp
+from . import db
 from . import misc
 from . import models
 from . import schemas
 
+from .base import app
 
-route = ibp.app.route  # pylint: disable=invalid-name
+
+def create_sqlalchemy_session(callback):
+    """Bottle plugin for handling SQLAlchemy sessions."""
+
+    def wrapper(*args, **kwargs):
+        session = db.Session()
+
+        try:
+            body = callback(session, *args, **kwargs)
+            session.commit()
+        except sqlalchemy.exc.SQLAlchemyError as exc:
+            session.rollback()
+            raise bottle.HTTPError(500, "Database Error", exc)
+        finally:
+            session.close()
+
+        return body
+
+    return wrapper
 
 
-def load_inmate_from_url_params(view):
-    """Decorate a view to require an inmate from URL parameters."""
+app.install(create_sqlalchemy_session)
 
-    @functools.wraps(view)
-    def inner(jurisdiction, inmate_id):
-        inmates, _ = models.Inmate.query.providers_by_id(inmate_id)
-        inmate = inmates.filter_by(jurisdiction=jurisdiction).first_or_404()
-        return view(inmate)
 
-    return inner
+def use_json_as_response_type(callback):
+    """Bottle plugin for setting json as the response type."""
+
+    def wrapper(*args, **kwargs):
+        bottle.response.content_type = "application/json"
+        body = callback(*args, **kwargs)
+        return json.dumps(body)
+
+    return wrapper
+
+
+app.install(use_json_as_response_type)
+
+
+def default_error_handler(error):
+    """Bottle default error handler."""
+    bottle.response.content_type = "application/json"
+    bottle.response.status = error.status
+    return json.dumps({"message": error.body})
+
+
+app.default_error_handler = default_error_handler
+
+
+def load_inmate_from_url_params(route):
+    """Decorate a route to load an inmate from URL parameters."""
+
+    @functools.wraps(route)
+    def wrapper(session, jurisdiction, inmate_id):
+        inmates, _ = db.query_providers_by_id(session, inmate_id)
+        try:
+            inmate = inmates.filter_by(jurisdiction=jurisdiction).one()
+        except sqlalchemy.orm.exc.NoResultFound as exc:
+            raise bottle.HTTPError(404, "Page not found") from exc
+
+        return route(session, inmate)
+
+    return wrapper
 
 
 def load_cls_from_url_params(cls):
-    """Decorate a view to require a given model from URL parameters."""
+    """Decorate a route to load a given model from URL parameters."""
 
-    def outer(view):
-        @functools.wraps(view)
-        def inner(jurisdiction, inmate_id, index):
-            query = cls.query.filter_by(
+    def decorator(route):
+        @functools.wraps(route)
+        def wrapper(session, jurisdiction, inmate_id, index):
+            query = session.query(cls).filter_by(
                 inmate_jurisdiction=jurisdiction, inmate_id=inmate_id, index=index,
             )
-            obj = query.first_or_404()
-            return view(obj)
+            try:
+                result = query.one()
+            except sqlalchemy.orm.exc.NoResultFound as exc:
+                raise bottle.HTTPError(404, "Page not found") from exc
 
-        return inner
+            return route(session, result)
 
-    return outer
+        return wrapper
+
+    return decorator
 
 
-@route("/inmate/<jurisdiction>/<int:inmate_id>")
+@app.get("/inmate/<jurisdiction>/<inmate_id:int>")
 @load_inmate_from_url_params
-def show_inmate(inmate):
+def show_inmate(session, inmate):  # pylint: disable=unused-argument
     """:py:mod:`flask` view to handle a GET request for an inmate's info.
 
     This :py:mod:`flask` view uses the following parameters extracted from the
@@ -105,108 +161,100 @@ def show_inmate(inmate):
     return schemas.inmate.dump(inmate)
 
 
-@route("/inmate")
-def show_inmates():
+@app.get("/inmate")
+def show_inmates(session):
     """:py:mod:`flask` view to handle a GET request for an inmate search."""
     try:
-        search = flask.request.args["query"]
+        search = bottle.request.get("query")
     except KeyError:
-        return {"message": "Search input must be provided"}, 400
+        raise bottle.HTTPError(400, "Search input must be provided")
 
     if not search:
-        return {"message": "Some search input must be provided"}, 400
-
-    query = models.Inmate.query
+        raise bottle.HTTPError(400, "Some search input must be provided")
 
     try:
         inmate_id = int(search.replace("-", ""))
-        inmates, errors = query.providers_by_id(inmate_id)
+        inmates, errors = db.query_providers_by_id(session, inmate_id)
 
     except ValueError:
         name = nameparser.HumanName(search)
-        inmates, errors = query.providers_by_name(name.first, name.last)
+        inmates, errors = db.query_providers_by_name(session, name.first, name.last)
 
     result = schemas.inmates.dump(inmates)
     return {"inmates": result, "errors": errors}
 
 
-@route("/request/<jurisdiction>/<int:inmate_id>", methods=["POST"])
+@app.post("/request/<jurisdiction>/<inmate_id:int>")
 @load_inmate_from_url_params
-def post_request(inmate):
+def post_request(session, inmate):
     """Create a request."""
     try:
-        fields = schemas.request.load(flask.request.json)
+        fields = schemas.request.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        return {"message": exc.messages}, 400
+        raise bottle.HTTPError(400, exc.messages) from exc
 
     index = misc.get_next_available_index(item.index for item in inmate.requests)
     request = models.Request(index=index, date_processed=date.today(), **fields)
     inmate.requests.append(request)
-    ibp.db.session.add(request)
-    ibp.db.session.commit()
+    session.add(request)
     return schemas.request.dump(request)
 
 
-@route("/request/<jurisdiction>/<int:inmate_id>/<int:index>", methods=["DELETE"])
+@app.delete("/request/<jurisdiction>/<inmate_id:int>/<index:int>")
 @load_cls_from_url_params(models.Request)
-def delete_request(request):
+def delete_request(session, request):
     """Delete a request."""
-    ibp.db.session.delete(request)
-    ibp.db.session.commit()
-    return {}
+    session.delete(request)
+    return ""
 
 
-@route("/request/<jurisdiction>/<int:inmate_id>/<int:index>", methods=["PUT"])
+@app.put("/request/<jurisdiction>/<inmate_id:int>/<index:int>")
 @load_cls_from_url_params(models.Request)
-def put_request(request):
+def put_request(session, request):
     """Update a request."""
     try:
-        fields = schemas.request.load(flask.request.json)
+        fields = schemas.request.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        return {"message": exc.messages}, 400
+        raise bottle.HTTPError(400, exc.messages) from exc
 
     request.update_from_kwargs(**fields)
-    ibp.db.session.add(request)
-    ibp.db.session.commit()
+    session.add(request)
     return schemas.request.dump(request)
 
 
-@route("/comment/<jurisdiction>/<int:inmate_id>", methods=["POST"])
+@app.post("/comment/<jurisdiction>/<inmate_id:int>")
 @load_inmate_from_url_params
-def post_comment(inmate):
+def post_comment(session, inmate):  # pylint: disable=unused-argument
     """Create a comment."""
     try:
-        fields = schemas.comment.load(flask.request.json)
+        fields = schemas.comment.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        return {"message": exc.messages}, 400
+        raise bottle.HTTPError(400, exc.messages) from exc
 
     index = misc.get_next_available_index(item.index for item in inmate.comments)
     comment = models.Comment(index=index, datetime=datetime.now(), **fields)
     inmate.comments.append(comment)
-    ibp.db.session.add(comment)
-    ibp.db.session.commit()
+    session.add(comment)
     return schemas.comment.dump(comment)
 
 
-@route("/comment/<jurisdiction>/<int:inmate_id>/<int:index>", methods=["DELETE"])
+@app.delete("/comment/<jurisdiction>/<inmate_id:int>/<index:int>")
 @load_cls_from_url_params(models.Comment)
-def delete_comment(comment):
+def delete_comment(session, comment):
     """Delete a comment."""
-    ibp.db.session.delete(comment)
-    ibp.db.session.commit()
+    session.delete(comment)
     return {}
 
 
-@route("/comment/<jurisdiction>/<int:inmate_id>/<int:index>", methods=["PUT"])
+@app.put("/comment/<jurisdiction>/<inmate_id:int>/<index:int>")
 @load_cls_from_url_params(models.Comment)
-def put_comment(comment):
+def put_comment(session, comment):
     """Update a comment."""
     try:
-        fields = schemas.comment.load(flask.request.json)
+        fields = schemas.comment.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        return {"message": exc.messages}, 400
+        raise bottle.HTTPError(400, exc.messages) from exc
 
     comment.update_from_kwargs(**fields)
-    ibp.db.session.add(comment)
-    ibp.db.session.commit()
+    session.add(comment)
     return schemas.comment.dump(comment)
