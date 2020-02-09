@@ -54,6 +54,11 @@ from . import schemas
 from .base import app
 
 
+###########
+# Plugins #
+###########
+
+
 def create_sqlalchemy_session(callback):
     """Bottle plugin for handling SQLAlchemy sessions."""
 
@@ -65,7 +70,7 @@ def create_sqlalchemy_session(callback):
             session.commit()
         except sqlalchemy.exc.SQLAlchemyError as exc:
             session.rollback()
-            raise bottle.HTTPError(500, "Database Error", exc)
+            raise bottle.HTTPError(500, "A database error occurred.", exc)
         finally:
             session.close()
 
@@ -91,6 +96,11 @@ def use_json_as_response_type(callback):
 app.install(use_json_as_response_type)
 
 
+##################
+# Error handling #
+##################
+
+
 def default_error_handler(error):
     """Bottle default error handler."""
     bottle.response.content_type = "application/json"
@@ -99,6 +109,11 @@ def default_error_handler(error):
 
 
 app.default_error_handler = default_error_handler
+
+
+###########
+# Helpers #
+###########
 
 
 def load_inmate_from_url_params(route):
@@ -138,6 +153,11 @@ def load_cls_from_url_params(cls):
     return decorator
 
 
+#################
+# Inmate routes #
+#################
+
+
 @app.get("/inmate/<jurisdiction>/<inmate_id:int>")
 @load_inmate_from_url_params
 def show_inmate(session, inmate):  # pylint: disable=unused-argument
@@ -162,7 +182,7 @@ def show_inmate(session, inmate):  # pylint: disable=unused-argument
 
 
 @app.get("/inmate")
-def show_inmates(session):
+def search_inmates(session):
     """:py:mod:`bottle` route to handle a GET request for an inmate search."""
     try:
         search = bottle.request.get("query")
@@ -184,9 +204,14 @@ def show_inmates(session):
     return {"inmates": result, "errors": errors}
 
 
+##################
+# Request routes #
+##################
+
+
 @app.post("/request/<jurisdiction>/<inmate_id:int>")
 @load_inmate_from_url_params
-def post_request(session, inmate):
+def create_request(session, inmate):
     """Create a request."""
     try:
         fields = schemas.request.load(bottle.request.json)
@@ -210,7 +235,7 @@ def delete_request(session, request):
 
 @app.put("/request/<jurisdiction>/<inmate_id:int>/<index:int>")
 @load_cls_from_url_params(models.Request)
-def put_request(session, request):
+def update_request(session, request):
     """Update a request."""
     try:
         fields = schemas.request.load(bottle.request.json)
@@ -222,9 +247,14 @@ def put_request(session, request):
     return schemas.request.dump(request)
 
 
+##################
+# Comment routes #
+##################
+
+
 @app.post("/comment/<jurisdiction>/<inmate_id:int>")
 @load_inmate_from_url_params
-def post_comment(session, inmate):  # pylint: disable=unused-argument
+def create_comment(session, inmate):
     """Create a comment."""
     try:
         fields = schemas.comment.load(bottle.request.json)
@@ -243,12 +273,12 @@ def post_comment(session, inmate):  # pylint: disable=unused-argument
 def delete_comment(session, comment):
     """Delete a comment."""
     session.delete(comment)
-    return {}
+    return ""
 
 
 @app.put("/comment/<jurisdiction>/<inmate_id:int>/<index:int>")
 @load_cls_from_url_params(models.Comment)
-def put_comment(session, comment):
+def update_comment(session, comment):
     """Update a comment."""
     try:
         fields = schemas.comment.load(bottle.request.json)
