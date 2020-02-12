@@ -31,7 +31,7 @@ def query_providers_by_id(session, id):
         - :py:data:`errors` is a list of error strings.
 
     """
-    inmates, errors = pymates.query_by_inmate_id(id, jurisdictions=["Texas"])
+    inmates, errors = pymates.query_by_inmate_id(id)
     inmates = (Inmate.from_response(session, inmate) for inmate in inmates)
 
     with session.begin_nested():
