@@ -1,7 +1,5 @@
 alembic
-Flask
-Flask-CORS
-Flask-SQLAlchemy
+bottle
 marshmallow
 nameparser
 sphinx
