@@ -51,23 +51,40 @@ from . import misc
 from . import models
 from . import schemas
 
-from .base import app
-
-
 ###########
 # Plugins #
 ###########
 
+# setup bottle application
+app = bottle.Bottle()  # pylint: disable=invalid-name
+
+
+def enable_cors(callback):
+    """Enable CORS by specifying permissive access-controls."""
+
+    @functools.wraps(callback)
+    def wrapper(*args, **kwargs):
+        body = callback(*args, **kwargs)
+        bottle.response.headers["Access-Control-Allow-Origin"] = "*"
+        bottle.response.headers["Access-Control-Allow-Methods"] = "*"
+        bottle.response.headers["Access-Control-Allow-Headers"] = "*"
+        return body
+
+    return wrapper
+
+
+app.install(enable_cors)
+
 
 def create_sqlalchemy_session(callback):
-    """Bottle plugin for handling SQLAlchemy sessions."""
+    """Create and handle SQLAlchemy sessions for all routes."""
 
+    @functools.wraps(callback)
     def wrapper(*args, **kwargs):
         session = db.Session()
 
         try:
             body = callback(session, *args, **kwargs)
-            session.commit()
         except sqlalchemy.exc.SQLAlchemyError as exc:
             session.rollback()
             raise bottle.HTTPError(500, "A database error occurred.", exc)
@@ -85,10 +102,10 @@ app.install(create_sqlalchemy_session)
 def use_json_as_response_type(callback):
     """Bottle plugin for setting json as the response type."""
 
+    @functools.wraps(callback)
     def wrapper(*args, **kwargs):
         bottle.response.content_type = "application/json"
-        body = callback(*args, **kwargs)
-        return json.dumps(body)
+        return callback(*args, **kwargs)
 
     return wrapper
 
@@ -101,14 +118,20 @@ app.install(use_json_as_response_type)
 ##################
 
 
+@enable_cors
+@use_json_as_response_type
 def default_error_handler(error):
-    """Bottle default error handler."""
-    bottle.response.content_type = "application/json"
+    """Handle Bottle errors by setting status code and returning body."""
     bottle.response.status = error.status
-    return json.dumps({"message": error.body})
+    return error.body
 
 
 app.default_error_handler = default_error_handler
+
+
+@app.route("/<:re:.*>", method="OPTIONS")
+def default_options(*args):  # pylint: disable=unused-argument
+    """Enable OPTIONS method for all routes."""
 
 
 ###########
@@ -201,7 +224,7 @@ def search_inmates(session):
         inmates, errors = db.query_providers_by_name(session, name.first, name.last)
 
     result = schemas.inmates.dump(inmates)
-    return {"inmates": result, "errors": errors}
+    return json.dumps({"inmates": result, "errors": errors})
 
 
 ##################
@@ -216,12 +239,14 @@ def create_request(session, inmate):
     try:
         fields = schemas.request.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, exc.messages) from exc
+        message = json.dumps(exc.messages)
+        raise bottle.HTTPError(400, message) from exc
 
     index = misc.get_next_available_index(item.index for item in inmate.requests)
     request = models.Request(index=index, date_processed=date.today(), **fields)
     inmate.requests.append(request)
     session.add(request)
+    session.commit()
     return schemas.request.dump(request)
 
 
@@ -230,6 +255,7 @@ def create_request(session, inmate):
 def delete_request(session, request):
     """Delete a request."""
     session.delete(request)
+    session.commit()
     return ""
 
 
@@ -240,10 +266,12 @@ def update_request(session, request):
     try:
         fields = schemas.request.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, exc.messages) from exc
+        message = json.dumps(exc.messages)
+        raise bottle.HTTPError(400, message) from exc
 
     request.update_from_kwargs(**fields)
     session.add(request)
+    session.commit()
     return schemas.request.dump(request)
 
 
@@ -259,12 +287,14 @@ def create_comment(session, inmate):
     try:
         fields = schemas.comment.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, exc.messages) from exc
+        message = json.dumps(exc.messages)
+        raise bottle.HTTPError(400, message) from exc
 
     index = misc.get_next_available_index(item.index for item in inmate.comments)
     comment = models.Comment(index=index, datetime=datetime.now(), **fields)
     inmate.comments.append(comment)
     session.add(comment)
+    session.commit()
     return schemas.comment.dump(comment)
 
 
@@ -273,6 +303,7 @@ def create_comment(session, inmate):
 def delete_comment(session, comment):
     """Delete a comment."""
     session.delete(comment)
+    session.commit()
     return ""
 
 
@@ -283,8 +314,10 @@ def update_comment(session, comment):
     try:
         fields = schemas.comment.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, exc.messages) from exc
+        message = json.dumps(exc.messages)
+        raise bottle.HTTPError(400, message) from exc
 
     comment.update_from_kwargs(**fields)
     session.add(comment)
+    session.commit()
     return schemas.comment.dump(comment)
