@@ -77,7 +77,7 @@ app.install(enable_cors)
 
 
 def create_sqlalchemy_session(callback):
-    """Create and handle SQLAlchemy sessions for all routes."""
+    """Create and close SQLAlchemy sessions for all routes."""
 
     @functools.wraps(callback)
     def wrapper(*args, **kwargs):
