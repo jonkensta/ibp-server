@@ -87,7 +87,7 @@ def create_sqlalchemy_session(callback):
             body = callback(session, *args, **kwargs)
         except sqlalchemy.exc.SQLAlchemyError as exc:
             session.rollback()
-            raise bottle.HTTPError(500, "A database error occurred.", exc)
+            raise bottle.HTTPError(500, json.dumps("A database error occurred."), exc)
         finally:
             session.close()
 
@@ -148,7 +148,7 @@ def load_inmate_from_url_params(route):
         try:
             inmate = inmates.filter_by(jurisdiction=jurisdiction).one()
         except sqlalchemy.orm.exc.NoResultFound as exc:
-            raise bottle.HTTPError(404, "Page not found") from exc
+            raise bottle.HTTPError(404, json.dumps("Page not found"), exc)
 
         return route(session, inmate)
 
@@ -167,7 +167,7 @@ def load_cls_from_url_params(cls):
             try:
                 result = query.one()
             except sqlalchemy.orm.exc.NoResultFound as exc:
-                raise bottle.HTTPError(404, "Page not found") from exc
+                raise bottle.HTTPError(404, json.dumps("Page not found"), exc)
 
             return route(session, result)
 
@@ -207,10 +207,7 @@ def show_inmate(session, inmate):  # pylint: disable=unused-argument
 @app.get("/inmate")
 def search_inmates(session):
     """:py:mod:`bottle` route to handle a GET request for an inmate search."""
-    try:
-        search = bottle.request.get("query")
-    except KeyError:
-        raise bottle.HTTPError(400, "Search input must be provided")
+    search = bottle.request.query.get("query")
 
     if not search:
         raise bottle.HTTPError(400, "Some search input must be provided")
@@ -221,6 +218,11 @@ def search_inmates(session):
 
     except ValueError:
         name = nameparser.HumanName(search)
+
+        if not (name.first and name.last):
+            message = "If using a name, please specify first and last name"
+            raise bottle.HTTPError(400, json.dumps(message))
+
         inmates, errors = db.query_providers_by_name(session, name.first, name.last)
 
     result = schemas.inmates.dump(inmates)
@@ -239,8 +241,7 @@ def create_request(session, inmate):
     try:
         fields = schemas.request.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        message = json.dumps(exc.messages)
-        raise bottle.HTTPError(400, message) from exc
+        raise bottle.HTTPError(400, json.dumps(exc.messages), exc)
 
     index = misc.get_next_available_index(item.index for item in inmate.requests)
     request = models.Request(index=index, date_processed=date.today(), **fields)
@@ -256,7 +257,7 @@ def delete_request(session, request):
     """Delete a request."""
     session.delete(request)
     session.commit()
-    return ""
+    return json.dumps("")
 
 
 @app.put("/request/<jurisdiction>/<inmate_id:int>/<index:int>")
@@ -266,8 +267,7 @@ def update_request(session, request):
     try:
         fields = schemas.request.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        message = json.dumps(exc.messages)
-        raise bottle.HTTPError(400, message) from exc
+        raise bottle.HTTPError(400, json.dumps(exc.messages), exc)
 
     request.update_from_kwargs(**fields)
     session.add(request)
@@ -287,8 +287,7 @@ def create_comment(session, inmate):
     try:
         fields = schemas.comment.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        message = json.dumps(exc.messages)
-        raise bottle.HTTPError(400, message) from exc
+        raise bottle.HTTPError(400, json.dumps(exc.messages), exc)
 
     index = misc.get_next_available_index(item.index for item in inmate.comments)
     comment = models.Comment(index=index, datetime=datetime.now(), **fields)
@@ -304,7 +303,7 @@ def delete_comment(session, comment):
     """Delete a comment."""
     session.delete(comment)
     session.commit()
-    return ""
+    return json.dumps("")
 
 
 @app.put("/comment/<jurisdiction>/<inmate_id:int>/<index:int>")
@@ -314,8 +313,7 @@ def update_comment(session, comment):
     try:
         fields = schemas.comment.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        message = json.dumps(exc.messages)
-        raise bottle.HTTPError(400, message) from exc
+        raise bottle.HTTPError(400, json.dumps(exc.messages), exc)
 
     comment.update_from_kwargs(**fields)
     session.add(comment)
