@@ -246,8 +246,10 @@ def create_request(session, inmate):
     index = misc.get_next_available_index(item.index for item in inmate.requests)
     request = models.Request(index=index, date_processed=date.today(), **fields)
     inmate.requests.append(request)
+
     session.add(request)
     session.commit()
+
     return schemas.request.dump(request)
 
 
@@ -257,7 +259,6 @@ def delete_request(session, request):
     """Delete a request."""
     session.delete(request)
     session.commit()
-    return json.dumps("")
 
 
 @app.put("/request/<jurisdiction>/<inmate_id:int>/<index:int>")
@@ -272,6 +273,7 @@ def update_request(session, request):
     request.update_from_kwargs(**fields)
     session.add(request)
     session.commit()
+
     return schemas.request.dump(request)
 
 
@@ -303,7 +305,6 @@ def delete_comment(session, comment):
     """Delete a comment."""
     session.delete(comment)
     session.commit()
-    return json.dumps("")
 
 
 @app.put("/comment/<jurisdiction>/<inmate_id:int>/<index:int>")
