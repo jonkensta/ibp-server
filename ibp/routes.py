@@ -210,7 +210,7 @@ def search_inmates(session):
     search = bottle.request.query.get("query")
 
     if not search:
-        raise bottle.HTTPError(400, "Some search input must be provided")
+        raise bottle.HTTPError(400, json.dumps("Some search input must be provided"))
 
     try:
         inmate_id = int(search.replace("-", ""))
