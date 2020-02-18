@@ -293,9 +293,11 @@ def create_comment(session, inmate):
 
     index = misc.get_next_available_index(item.index for item in inmate.comments)
     comment = models.Comment(index=index, datetime=datetime.now(), **fields)
+
     inmate.comments.append(comment)
     session.add(comment)
     session.commit()
+
     return schemas.comment.dump(comment)
 
 
@@ -319,4 +321,5 @@ def update_comment(session, comment):
     comment.update_from_kwargs(**fields)
     session.add(comment)
     session.commit()
+
     return schemas.comment.dump(comment)
