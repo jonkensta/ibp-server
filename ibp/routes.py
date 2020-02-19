@@ -178,7 +178,11 @@ def show_inmate(session, inmate):  # pylint: disable=unused-argument
         - :py:data:`errors` List of error strings encountered during lookup.
 
     """
-    return schemas.inmate.dump(inmate)
+    cookie_date_postmarked = bottle.request.cookies.get("datePostmarked")
+    date_postmarked = cookie_date_postmarked or str(datetime.now())
+    return json.dumps(
+        {"inmate": schemas.inmate.dump(inmate), "datePostmarked": date_postmarked}
+    )
 
 
 @app.get("/inmate")
@@ -202,8 +206,7 @@ def search_inmates(session):
 
         inmates, errors = db.query_providers_by_name(session, name.first, name.last)
 
-    result = schemas.inmates.dump(inmates)
-    return json.dumps({"inmates": result, "errors": errors})
+    return json.dumps({"inmates": schemas.inmates.dump(inmates), "errors": errors})
 
 
 ##################
@@ -227,7 +230,10 @@ def create_request(session, inmate):
     session.add(request)
     session.commit()
 
-    return schemas.request.dump(request)
+    date_postmarked = datetime.combine(request.date_postmarked, datetime.min.time())
+    bottle.response.set_cookie("datePostmarked", str(date_postmarked), path="/")
+
+    return schemas.request.dumps(request)
 
 
 @app.delete("/request/<jurisdiction>/<inmate_id:int>/<index:int>")
@@ -251,7 +257,7 @@ def update_request(session, request):
     session.add(request)
     session.commit()
 
-    return schemas.request.dump(request)
+    return schemas.request.dumps(request)
 
 
 ##################
@@ -275,7 +281,7 @@ def create_comment(session, inmate):
     session.add(comment)
     session.commit()
 
-    return schemas.comment.dump(comment)
+    return schemas.comment.dumps(comment)
 
 
 @app.delete("/comment/<jurisdiction>/<inmate_id:int>/<index:int>")
@@ -299,4 +305,4 @@ def update_comment(session, comment):
     session.add(comment)
     session.commit()
 
-    return schemas.comment.dump(comment)
+    return schemas.comment.dumps(comment)
