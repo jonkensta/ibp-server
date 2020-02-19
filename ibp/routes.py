@@ -59,23 +59,6 @@ from . import schemas
 app = bottle.Bottle()  # pylint: disable=invalid-name
 
 
-def enable_cors(callback):
-    """Enable CORS by specifying permissive access-controls."""
-
-    @functools.wraps(callback)
-    def wrapper(*args, **kwargs):
-        body = callback(*args, **kwargs)
-        bottle.response.headers["Access-Control-Allow-Origin"] = "*"
-        bottle.response.headers["Access-Control-Allow-Methods"] = "*"
-        bottle.response.headers["Access-Control-Allow-Headers"] = "*"
-        return body
-
-    return wrapper
-
-
-app.install(enable_cors)
-
-
 def create_sqlalchemy_session(callback):
     """Create and close SQLAlchemy sessions for all routes."""
 
@@ -118,7 +101,6 @@ app.install(use_json_as_response_type)
 ##################
 
 
-@enable_cors
 @use_json_as_response_type
 def default_error_handler(error):
     """Handle Bottle errors by setting status code and returning body."""
@@ -127,11 +109,6 @@ def default_error_handler(error):
 
 
 app.default_error_handler = default_error_handler
-
-
-@app.route("/<:re:.*>", method="OPTIONS")
-def default_options(*args):  # pylint: disable=unused-argument
-    """Enable OPTIONS method for all routes."""
 
 
 ###########
