@@ -1,7 +1,9 @@
-import logging
+"""Helpers for generating warnings for inmates and requests."""
+
+
 from datetime import date, datetime, timedelta
 
-import ibp
+from .base import config
 
 
 def _inmate_entry_age_warnings(inmate):
@@ -12,15 +14,14 @@ def _inmate_entry_age_warnings(inmate):
             f"Data entry for {inmate.jurisdiction} inmate #{inmate.id:08d}"
             f" has never been verified."
         )
-        return
-
-    inmates_cache_ttl = ibp.config.getint("warnings", "inmates_cache_ttl")
-    ttl = timedelta(hours=inmates_cache_ttl)
-    if age > ttl:
-        yield (
-            f"Data entry for {inmate.jurisdiction} inmate #{inmate.id:08d}"
-            f" is {age.days} old."
-        )
+    else:
+        inmates_cache_ttl = config.getint("warnings", "inmates_cache_ttl")
+        ttl = timedelta(hours=inmates_cache_ttl)
+        if age > ttl:
+            yield (
+                f"Data entry for {inmate.jurisdiction} inmate #{inmate.id:08d}"
+                f" is {age.days} old."
+            )
 
 
 def _inmate_release_warnings(inmate):
@@ -29,7 +30,7 @@ def _inmate_release_warnings(inmate):
     except TypeError:
         return
 
-    min_release_days = ibp.config.getint("warnings", "min_release_timedelta")
+    min_release_days = config.getint("warnings", "min_release_timedelta")
     min_timedelta = timedelta(days=min_release_days)
 
     if to_release <= timedelta(0):
