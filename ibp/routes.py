@@ -214,6 +214,14 @@ def search_inmates(session):
 ##################
 
 
+@app.get("/request_warnings/<jurisdiction>/<inmate_id:int>")
+@load_inmate_from_url_params
+def get_request_warnings(session, inmate):  # pylint: disable=unused-argument
+    """Get request warnings for a particular inmate."""
+    postmark_date = bottle.request.query.get("postmark_date")
+    return postmark_date
+
+
 @app.post("/request/<jurisdiction>/<inmate_id:int>")
 @load_inmate_from_url_params
 def create_request(session, inmate):
