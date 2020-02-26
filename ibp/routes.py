@@ -50,6 +50,7 @@ from . import db
 from . import misc
 from . import models
 from . import schemas
+from . import warnings
 
 ###########
 # Plugins #
@@ -214,12 +215,21 @@ def search_inmates(session):
 ##################
 
 
-@app.get("/request_warnings/<jurisdiction>/<inmate_id:int>")
+@app.get("/warning/<jurisdiction>/<inmate_id:int>")
 @load_inmate_from_url_params
 def get_request_warnings(session, inmate):  # pylint: disable=unused-argument
     """Get request warnings for a particular inmate."""
-    postmark_date = bottle.request.query.get("postmark_date")
-    return postmark_date
+    date_postmarked = bottle.request.query.get("datePostmarked")
+    try:
+        date_postmarked = datetime.strptime(date_postmarked, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise bottle.HTTPError(400, json.dumps(str(exc)), exc)
+
+    def chain_warnings():
+        yield from warnings.for_inmate(inmate)
+        yield from warnings.for_request(inmate, date_postmarked)
+
+    return json.dumps(list(chain_warnings()))
 
 
 @app.post("/request/<jurisdiction>/<inmate_id:int>")
