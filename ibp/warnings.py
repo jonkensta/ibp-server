@@ -60,7 +60,7 @@ def for_request(inmate, postmarkdate):
         return
 
     delta = postmarkdate - last_filled_request.date_postmarked
-    days = ibp.config.getint("warnings", "min_postmark_timedelta")
+    days = config.getint("warnings", "min_postmark_timedelta")
     min_delta = timedelta(days=days)
 
     if delta.days < 0:
