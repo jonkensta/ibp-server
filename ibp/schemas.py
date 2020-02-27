@@ -60,23 +60,11 @@ class RequestSchema(Schema):
     index = fields.Int(dump_only=True)
     """Read-only auto-incrementing request index."""
 
-    date_postmarked = fields.DateTime(required=True)
+    date_postmarked = fields.Date(required=True)
     """USPS postmarkdate of the accompanying letter."""
 
     action = fields.Str(validate=validate.OneOf(["Tossed", "Filled"]), required=True)
     """Action taken on the corresponding request."""
-
-    # pylint: disable=unused-argument, no-self-use
-    @pre_dump
-    def convert_date(self, data, many, **kwargs):
-        """Convert postmark date to a datetime before dumping to JSON."""
-
-        def convert_date_to_datetime(date):
-            return datetime.combine(date, datetime.min.time())
-
-        data.date_postmarked = convert_date_to_datetime(data.date_postmarked)
-
-        return data
 
 
 class InmateSchema(Schema):

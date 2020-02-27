@@ -180,7 +180,7 @@ def show_inmate(session, inmate):  # pylint: disable=unused-argument
 
     """
     cookie_date_postmarked = bottle.request.cookies.get("datePostmarked")
-    date_postmarked = cookie_date_postmarked or str(datetime.now())
+    date_postmarked = cookie_date_postmarked or str(date.today())
     return json.dumps(
         {"inmate": schemas.inmate.dump(inmate), "datePostmarked": date_postmarked}
     )
@@ -248,8 +248,7 @@ def create_request(session, inmate):
     session.add(request)
     session.commit()
 
-    date_postmarked = datetime.combine(request.date_postmarked, datetime.min.time())
-    bottle.response.set_cookie("datePostmarked", str(date_postmarked), path="/")
+    bottle.response.set_cookie("datePostmarked", str(request.date_postmarked), path="/")
 
     return schemas.request.dumps(request)
 
