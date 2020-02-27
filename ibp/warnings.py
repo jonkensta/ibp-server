@@ -59,6 +59,9 @@ def for_request(inmate, postmarkdate):
     except StopIteration:
         return
 
+    if postmarkdate > date.today():
+        yield "Postmark date is in the future."
+
     delta = postmarkdate - last_filled_request.date_postmarked
     days = config.getint("warnings", "min_postmark_timedelta")
     min_delta = timedelta(days=days)
