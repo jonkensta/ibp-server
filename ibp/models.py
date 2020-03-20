@@ -23,6 +23,7 @@ anywhere else apart from here.
 # pylint: disable=too-few-public-methods, invalid-name
 
 import typing
+from datetime import datetime, timedelta
 
 import sqlalchemy
 from sqlalchemy import Column, Enum, Text, Integer, String, DateTime, Date, ForeignKey
@@ -30,6 +31,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.processors import str_to_date
 from sqlalchemy.schema import ForeignKeyConstraint
 from sqlalchemy.ext.declarative import declared_attr, declarative_base
+
+from .base import config
 
 Base: typing.Any = declarative_base()
 """Base class for :py:mod:`sqlalchemy` models."""
@@ -61,8 +64,8 @@ Jurisdiction = Enum("Texas", "Federal", name="jurisdiction_enum")
 """Alias for inmate jurisdiction :py:class:`sqlalchemy.types.Enum`.
 
 Columns of this type store the jurisdiction level of the inmate.
-Currently, this must be either 'Texas' or 'Federal', but the supported list
-may be extended to include other jurisdictions in the future
+Currently, this must be either 'Texas' or 'Federal', but
+the supported list may be extended to include other jurisdictions in the future
 (for example, other states or counties).
 
 """
@@ -198,6 +201,16 @@ class Inmate(Base):
         kwargs["id"] = int(kwargs["id"].replace("-", ""))
         kwargs["unit"] = session.query(Unit).filter_by(name=kwargs["unit"]).first()
         return Inmate(**kwargs)
+
+    def db_entry_is_stale(self):
+        """Calculate if an inmate database entry is stale based on configuration."""
+        try:
+            age = datetime.now() - self.datetime_fetched
+        except TypeError:
+            return True
+
+        ttl = timedelta(hours=config.getint("warnings", "inmates_cache_ttl"))
+        return age > ttl
 
 
 class HasInmateIndexKey:

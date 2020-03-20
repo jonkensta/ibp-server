@@ -37,11 +37,13 @@ as inputs.
 
 # pylint: disable=no-member
 
+import io
 import json
 import functools
 from datetime import date, datetime
 
 import bottle
+import barcode
 import nameparser
 import sqlalchemy
 import marshmallow
@@ -50,7 +52,6 @@ from . import db
 from . import misc
 from . import models
 from . import schemas
-from . import warnings
 
 ###########
 # Plugins #
@@ -97,6 +98,17 @@ def use_json_as_response_type(callback):
 app.install(use_json_as_response_type)
 
 
+def send_bytes(bytes_, mimetype):
+    """Bottle method for sending bytes objects."""
+
+    headers = dict()
+    headers["Content-Type"] = mimetype
+    headers["Content-Length"] = len(bytes_)
+
+    body = "" if bottle.request.method == "HEAD" else bytes_
+    return bottle.HTTPResponse(body, **headers)
+
+
 ##################
 # Error handling #
 ##################
@@ -122,11 +134,18 @@ def load_inmate_from_url_params(route):
 
     @functools.wraps(route)
     def wrapper(session, jurisdiction, inmate_id):
-        inmates, _ = db.query_providers_by_id(session, inmate_id)
+        query = session.query(models.Inmate).filter_by(
+            jurisdiction=jurisdiction, id=inmate_id
+        )
+
         try:
-            inmate = inmates.filter_by(jurisdiction=jurisdiction).one()
-        except sqlalchemy.orm.exc.NoResultFound as exc:
-            raise bottle.HTTPError(404, json.dumps("Page not found"), exc)
+            inmate = query.one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            inmates, _ = db.query_providers_by_id(session, inmate_id)
+            try:
+                inmate = inmates.filter_by(jurisdiction=jurisdiction).one()
+            except sqlalchemy.orm.exc.NoResultFound as exc:
+                raise bottle.HTTPError(404, json.dumps("Page not found"), exc)
 
         return route(session, inmate)
 
@@ -160,8 +179,7 @@ def load_cls_from_url_params(cls):
 
 
 @app.get("/inmate/<jurisdiction>/<inmate_id:int>")
-@load_inmate_from_url_params
-def show_inmate(session, inmate):  # pylint: disable=unused-argument
+def show_inmate(session, jurisdiction, inmate_id):
     """:py:mod:`bottle` route to handle a GET request for an inmate's info.
 
     This :py:mod:`bottle` route uses the following parameters extracted from the
@@ -177,12 +195,38 @@ def show_inmate(session, inmate):  # pylint: disable=unused-argument
 
         - :py:data:`inmate` JSON encoding of the inmate information.
         - :py:data:`errors` List of error strings encountered during lookup.
+        - :py:data:`datePostmarked` Default postmarkdate to use in forms.
 
     """
+
+    query = session.query(models.Inmate).filter_by(
+        jurisdiction=jurisdiction, id=inmate_id
+    )
+
+    try:
+        inmate = query.one()
+    except sqlalchemy.orm.exc.NoResultFound:
+        inmates, _ = db.query_providers_by_id(session, inmate_id)
+
+        try:
+            inmate = inmates.filter_by(jurisdiction=jurisdiction).one()
+        except sqlalchemy.orm.exc.NoResultFound as exc:
+            raise bottle.HTTPError(404, json.dumps("Page not found"), exc)
+
+    errors = []
+    if inmate.db_entry_is_stale():
+        inmates, errors = db.query_providers_by_id(session, inmate_id)
+        inmate = inmates.filter_by(jurisdiction=jurisdiction).one()
+
     cookie_date_postmarked = bottle.request.cookies.get("datePostmarked")
     date_postmarked = cookie_date_postmarked or str(date.today())
+
     return json.dumps(
-        {"inmate": schemas.inmate.dump(inmate), "datePostmarked": date_postmarked}
+        {
+            "inmate": schemas.inmate.dump(inmate),
+            "errors": errors,
+            "datePostmarked": date_postmarked,
+        }
     )
 
 
@@ -213,23 +257,6 @@ def search_inmates(session):
 ##################
 # Request routes #
 ##################
-
-
-@app.get("/warning/<jurisdiction>/<inmate_id:int>")
-@load_inmate_from_url_params
-def get_request_warnings(session, inmate):  # pylint: disable=unused-argument
-    """Get request warnings for a particular inmate."""
-    date_postmarked = bottle.request.query.get("datePostmarked")
-    try:
-        date_postmarked = datetime.strptime(date_postmarked, "%Y-%m-%d").date()
-    except ValueError as exc:
-        raise bottle.HTTPError(400, json.dumps(str(exc)), exc)
-
-    def chain_warnings():
-        yield from warnings.for_inmate(inmate)
-        yield from warnings.for_request(inmate, date_postmarked)
-
-    return json.dumps(list(chain_warnings()))
 
 
 @app.post("/request/<jurisdiction>/<inmate_id:int>")
@@ -275,6 +302,17 @@ def update_request(session, request):
     session.commit()
 
     return schemas.request.dumps(request)
+
+
+@app.get("/label/<jurisdiction>/<inmate_id:int>/<index:int>")
+@load_cls_from_url_params(models.Request)
+def get_request_label(session, request):  # pylint: disable=unused-argument
+    """Get a label for a request."""
+    label = misc.render_request_label(request)
+    label_bytes_io = io.BytesIO()
+    label.save(label_bytes_io, "PNG")
+    label_bytes = label_bytes_io.getvalue()
+    return send_bytes(label_bytes, "image/png")
 
 
 ##################
