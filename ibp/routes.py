@@ -226,9 +226,9 @@ def show_inmate(session, jurisdiction, inmate_id):
 
     return json.dumps(
         {
-            "inmate": schemas.inmate.dump(inmate),
             "errors": errors,
             "datePostmarked": date_postmarked,
+            "inmate": schemas.inmate.dump(inmate),
             "minPostmarkTimedelta": min_postmark_timedelta,
         }
     )

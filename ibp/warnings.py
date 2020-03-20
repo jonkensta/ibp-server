@@ -21,7 +21,7 @@ def inmate_entry_age(inmate):
         if age > ttl:
             return (
                 f"Data entry for {inmate.jurisdiction} inmate #{inmate.id:08d}"
-                f" is {age.days} old."
+                f" is {age.days} day(s) old."
             )
 
     return None
@@ -42,8 +42,8 @@ def inmate_pending_release(inmate):
 
     if to_release <= min_timedelta:
         return (
-            f"{inmate.jurisdiction} inmate #{inmate.id:08d} is "
-            f" {to_release.days} days from release."
+            f"{inmate.jurisdiction} inmate #{inmate.id:08d} is"
+            f" {to_release.days} day(s) from release."
         )
 
     return None
