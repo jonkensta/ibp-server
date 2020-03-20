@@ -18,11 +18,7 @@ instantiate anything.
 
 from marshmallow import Schema, fields, validate, pre_dump
 
-from .base import config
-
 from . import warnings
-
-from .base import config
 
 
 class UnitSchema(Schema):
@@ -94,13 +90,6 @@ class InmateSchema(Schema):
     lookups = fields.Nested(LookupSchema, many=True)
     comments = fields.Nested(CommentSchema, many=True)
     requests = fields.Nested(RequestSchema, many=True)
-
-    min_postmarkdate_timedelta = fields.Method("get_min_postmarkdate_timedelta")
-
-    # pylint: disable=no-self-use, unused-argument
-    def get_min_postmarkdate_timedelta(self, obj):
-        """Get the minimum time between postmark dates."""
-        return config.getint("warnings", "min_postmark_timedelta")
 
 
 request = RequestSchema(unknown="EXCLUDE")

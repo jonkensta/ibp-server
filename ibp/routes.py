@@ -53,6 +53,8 @@ from . import misc
 from . import models
 from . import schemas
 
+from .base import config
+
 ###########
 # Plugins #
 ###########
@@ -220,12 +222,14 @@ def show_inmate(session, jurisdiction, inmate_id):
 
     cookie_date_postmarked = bottle.request.cookies.get("datePostmarked")
     date_postmarked = cookie_date_postmarked or str(date.today())
+    min_postmark_timedelta = config.getint("warnings", "min_postmark_timedelta")
 
     return json.dumps(
         {
             "inmate": schemas.inmate.dump(inmate),
             "errors": errors,
             "datePostmarked": date_postmarked,
+            "minPostmarkTimedelta": min_postmark_timedelta,
         }
     )
 
