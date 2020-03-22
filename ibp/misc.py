@@ -1,10 +1,7 @@
 """Miscellaneous utility functions."""
 
-import io
-import os
 import typing
 import itertools
-import subprocess
 
 import barcode
 from barcode.writer import ImageWriter
@@ -23,10 +20,11 @@ def get_next_available_index(indices: typing.Iterable[int]) -> int:
 
 
 def code39(text, size, dpi=300):
+    """Create a barcode image given text and size box."""
     writer = ImageWriter()
     options = dict(write_text=False, writer=writer, dpi=int(dpi), quiet_zone=0)
 
-    def px2mm(px):
+    def px2mm(px):  # pylint: disable=invalid-name
         """Convert pixels to millimeters for our given DPI."""
         return 25.4 * px / options["dpi"]
 
@@ -44,13 +42,13 @@ def code39(text, size, dpi=300):
 
 
 def build_font_fitter(min_font=1, max_font=100):
-
+    """Build a function that returns a font to best fit text to a box."""
     fonts = {
         font_size: ImageFont.truetype("DejaVuSansMono.ttf", font_size)
         for font_size in range(min_font, max_font)
     }
 
-    def fit_font(size, text):
+    def wrapped(size, text):
         size_h, size_w = size
 
         min_, max_ = min_font, max_font
@@ -68,13 +66,16 @@ def build_font_fitter(min_font=1, max_font=100):
         font = fonts[min_]
         return font
 
-    return fit_font
+    return wrapped
 
 
-fit_font = build_font_fitter()
+fit_font = build_font_fitter()  # pylint: disable=invalid-name
+"""Returns a font that best fits text to a box."""
 
 
 class Box:
+    """Utility class for modelling a textbox."""
+
     def __init__(self, x0, y0, x1, y1):
         x0 = int(round(x0))
         y0 = int(round(y0))
@@ -118,7 +119,8 @@ class Box:
         return self.width, self.height
 
 
-def fit_text(draw, box, text):
+def add_text(draw, box, text):
+    """Add text to a box with a fitted font."""
     text = str(text)
 
     font = fit_font(box.size, text)
@@ -130,47 +132,36 @@ def fit_text(draw, box, text):
     draw.text((x0, y0), text, font=font)
 
 
-def add_barcode(image, label, box):
-    image.paste(code39(label, box.size), (box.x0, box.y0))
-
-
 def render_request_label(request, size=(1300, 500)):
     width, height = size
     image = Image.new("L", size, color=(255,))
     draw = ImageDraw.Draw(image)
 
+    id_ = "-".join(
+        str(field)
+        for field in [request.inmate_jurisdiction, request.inmate_id, request.index]
+    )
+
     # package ID barcode
-    box = Box(0.68 * width, 0.00 * height, 1.00 * width, 0.10 * height)
-    fit_text(draw, box, "package ID")
+    box = Box(0.01 * width, 0.01 * height, 0.99 * width, 0.50 * height)
+    image.paste(code39(id_, box.size), (box.x0, box.y0))
 
-    box = Box(0.68 * width, 0.10 * height, 1.00 * width, 0.50 * height)
-    add_barcode(image, "1234", box)
-
-    box = Box(0.68 * width, 0.50 * height, 1.00 * width, 0.60 * height)
-    fit_text(draw, box, "1234")
-
-    # inmate ID barcode
-    box = Box(0.02 * width, 0.00 * height, 0.65 * width, 0.10 * height)
-    fit_text(draw, box, "inmate ID")
-
-    box = Box(0.02 * width, 0.10 * height, 0.65 * width, 0.50 * height)
-    add_barcode(image, str(request.inmate.id), box)
-
-    box = Box(0.02 * width, 0.50 * height, 0.65 * width, 0.60 * height)
-    fit_text(draw, box, str(request.inmate.id))
+    box = Box(0.01 * width, 0.50 * height, 0.99 * width, 0.60 * height)
+    add_text(draw, box, id_)
 
     # inmate name
-    box = Box(0.00 * width, 0.60 * height, 1.00 * width, 0.90 * height)
-    fit_text(draw, box, str(request.inmate.first_name))
+    box = Box(0.01 * width, 0.60 * height, 0.99 * width, 0.90 * height)
+    name = " ".join([request.inmate.first_name, request.inmate.last_name])
+    add_text(draw, box, name)
 
     # other info at bottom
-    box = Box(0.00 * width, 0.90 * height, 0.33 * width, 1.00 * height)
-    fit_text(draw, box, request.inmate.jurisdiction)
+    box = Box(0.01 * width, 0.90 * height, 0.33 * width, 0.98 * height)
+    add_text(draw, box, request.inmate.jurisdiction)
 
-    box = Box(0.33 * width, 0.90 * height, 0.67 * width, 1.00 * height)
-    fit_text(draw, box, request.inmate.unit.name)
+    box = Box(0.33 * width, 0.90 * height, 0.67 * width, 0.99 * height)
+    add_text(draw, box, request.inmate.unit.name)
 
-    box = Box(0.67 * width, 0.90 * height, 1.00 * width, 1.00 * height)
-    fit_text(draw, box, request.inmate.unit.shipping_method)
+    box = Box(0.67 * width, 0.90 * height, 0.99 * width, 0.99 * height)
+    add_text(draw, box, request.inmate.unit.shipping_method)
 
     return image

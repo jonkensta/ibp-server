@@ -2,6 +2,8 @@ alembic
 bottle
 marshmallow
 nameparser
+pillow
+python-barcode
 sphinx
 SQLAlchemy
 git+git://github.com/jonkensta/inmate-providers@master#egg=pymates

@@ -102,7 +102,6 @@ app.install(use_json_as_response_type)
 
 def send_bytes(bytes_, mimetype):
     """Bottle method for sending bytes objects."""
-
     headers = dict()
     headers["Content-Type"] = mimetype
     headers["Content-Length"] = len(bytes_)
@@ -200,7 +199,6 @@ def show_inmate(session, jurisdiction, inmate_id):
         - :py:data:`datePostmarked` Default postmarkdate to use in forms.
 
     """
-
     query = session.query(models.Inmate).filter_by(
         jurisdiction=jurisdiction, id=inmate_id
     )
@@ -220,18 +218,7 @@ def show_inmate(session, jurisdiction, inmate_id):
         inmates, errors = db.query_providers_by_id(session, inmate_id)
         inmate = inmates.filter_by(jurisdiction=jurisdiction).one()
 
-    cookie_date_postmarked = bottle.request.cookies.get("datePostmarked")
-    date_postmarked = cookie_date_postmarked or str(date.today())
-    min_postmark_timedelta = config.getint("warnings", "min_postmark_timedelta")
-
-    return json.dumps(
-        {
-            "errors": errors,
-            "datePostmarked": date_postmarked,
-            "inmate": schemas.inmate.dump(inmate),
-            "minPostmarkTimedelta": min_postmark_timedelta,
-        }
-    )
+    return json.dumps({"errors": errors, "inmate": schemas.inmate.dump(inmate)})
 
 
 @app.get("/inmate")
@@ -365,3 +352,16 @@ def update_comment(session, comment):
     session.commit()
 
     return schemas.comment.dumps(comment)
+
+
+################
+# Misc. routes #
+################
+
+
+@app.get("/config")
+def get_warnings_config(session):  # pylint: disable=unused-argument
+    """Get server warnings configuration."""
+    keys, values = config["warnings"].keys(), config["warnings"].values()
+    warnings_config = {key: int(value) for key, value in zip(keys, values)}
+    return json.dumps(warnings_config)
