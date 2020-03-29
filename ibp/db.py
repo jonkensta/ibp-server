@@ -8,8 +8,8 @@ from sqlalchemy.orm import sessionmaker
 
 import pymates
 
-from .base import get_toplevel_directory
 from .models import Inmate
+from .base import get_toplevel_directory
 
 # pylint: disable=invalid-name
 
@@ -28,7 +28,7 @@ Session = build_sessionmaker()
 
 
 # pylint: disable=redefined-builtin
-def query_providers_by_id(session, id):
+def query_providers_by_id(session, id: int):
     """Query inmate providers with an inmate ID.
 
     :param id: Inmate TDCJ or FBOP ID to search.
@@ -51,7 +51,7 @@ def query_providers_by_id(session, id):
     return inmates, errors
 
 
-def query_providers_by_name(session, first_name, last_name):
+def query_providers_by_name(session, first_name: str, last_name: str):
     """Query inmate providers with an inmate ID.
 
     :param first_name: Inmate first name to search.

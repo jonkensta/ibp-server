@@ -43,7 +43,6 @@ import functools
 from datetime import date, datetime
 
 import bottle
-import barcode
 import nameparser
 import sqlalchemy
 import marshmallow
