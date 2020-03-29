@@ -1,6 +1,5 @@
 """Database engine bindings and session-maker."""
 
-import os
 import urllib
 
 import sqlalchemy
@@ -9,16 +8,16 @@ from sqlalchemy.orm import sessionmaker
 import pymates
 
 from .models import Inmate
-from .base import get_toplevel_directory
+from .base import get_toplevel_path
 
 # pylint: disable=invalid-name
 
 
 def build_sessionmaker():
     """Build a sessionmaker for our sqlite database."""
-    toplevel = get_toplevel_directory()
-    filepath = os.path.join(toplevel, "data.db")
-    uri_parts = ("sqlite", "/", filepath, "", "", "")  # netloc needs to be "/".
+    toplevel = get_toplevel_path()
+    filepath = toplevel.joinpath("data.db").absolute()
+    uri_parts = ("sqlite", "/", str(filepath), "", "", "")  # netloc needs to be "/".
     uri = urllib.parse.urlunparse(uri_parts)
     engine = sqlalchemy.create_engine(uri)
     return sessionmaker(bind=engine)

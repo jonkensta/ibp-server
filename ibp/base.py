@@ -2,16 +2,17 @@
 
 import os
 import configparser
+from pathlib import Path
 
 
-def get_toplevel_directory():
-    """Get project toplevel directory."""
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+def get_toplevel_path() -> Path:
+    """Get project toplevel path."""
+    return Path(__file__).parent.parent
 
 
 def read_server_config():
     """Read configuration file at module load time."""
-    toplevel = get_toplevel_directory()
+    toplevel = get_toplevel_path()
     filepath = os.path.join(toplevel, "conf", "server.conf")
     server_config = configparser.ConfigParser()
     server_config.read([filepath])
