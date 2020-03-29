@@ -1,21 +1,30 @@
 """Database engine bindings and session-maker."""
 
-from os.path import abspath, dirname
-from os.path import join as join_path
+import os
+import urllib
 
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
 import pymates
 
+from .base import get_toplevel_directory
 from .models import Inmate
 
 # pylint: disable=invalid-name
-database_fpath = abspath(join_path(dirname(__file__), "..", "data.db"))
-database_uri = "sqlite:///" + database_fpath
-engine = sqlalchemy.create_engine(database_uri)
 
-Session = sessionmaker(bind=engine)
+
+def build_sessionmaker():
+    """Build a sessionmaker for our sqlite database."""
+    toplevel = get_toplevel_directory()
+    filepath = os.path.join(toplevel, "data.db")
+    uri_parts = ("sqlite", "/", filepath, "", "", "")  # netloc needs to be "/".
+    uri = urllib.parse.urlunparse(uri_parts)
+    engine = sqlalchemy.create_engine(uri)
+    return sessionmaker(bind=engine)
+
+
+Session = build_sessionmaker()
 
 
 # pylint: disable=redefined-builtin
