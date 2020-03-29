@@ -196,7 +196,6 @@ def show_inmate(session, jurisdiction, inmate_id):
 
         - :py:data:`inmate` JSON encoding of the inmate information.
         - :py:data:`errors` List of error strings encountered during lookup.
-        - :py:data:`datePostmarked` Default postmarkdate to use in forms.
 
     """
     query = session.query(models.Inmate).filter_by(
@@ -265,8 +264,6 @@ def create_request(session, inmate):
 
     session.add(request)
     session.commit()
-
-    bottle.response.set_cookie("datePostmarked", str(request.date_postmarked), path="/")
 
     return schemas.request.dumps(request)
 
