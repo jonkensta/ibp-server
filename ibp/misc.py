@@ -7,6 +7,8 @@ import barcode
 from barcode.writer import ImageWriter
 from PIL import Image, ImageDraw, ImageFont
 
+# pylint: disable=invalid-name
+
 
 def get_next_available_index(indices: typing.Iterable[int]) -> int:
     """Get next available index from an iterable of indices."""
@@ -77,6 +79,7 @@ class Box:
     """Utility class for modelling a textbox."""
 
     def __init__(self, x0, y0, x1, y1):
+        """Initialize our textbox."""
         x0 = int(round(x0))
         y0 = int(round(y0))
         x1 = int(round(x1))
@@ -92,30 +95,37 @@ class Box:
 
     @property
     def x0(self):
+        """x-component of bottom-left point."""
         return self._x0
 
     @property
     def y0(self):
+        """y-component of bottom-left point."""
         return self._y0
 
     @property
     def x1(self):
+        """x-component of top-right point."""
         return self._x1
 
     @property
     def y1(self):
+        """y-component of top-right point."""
         return self._y1
 
     @property
     def width(self):
+        """Width of the textbox."""
         return self._x1 - self._x0
 
     @property
     def height(self):
+        """Height of the textbox."""
         return self._y1 - self._y0
 
     @property
     def size(self):
+        """Size of the textbook in terms of (width, height)."""
         return self.width, self.height
 
 
@@ -133,14 +143,13 @@ def add_text(draw, box, text):
 
 
 def render_request_label(request, size=(1300, 500)):
+    """Render label for a request."""
     width, height = size
+
     image = Image.new("L", size, color=(255,))
     draw = ImageDraw.Draw(image)
 
-    id_ = "-".join(
-        str(field)
-        for field in [request.inmate_jurisdiction, request.inmate_id, request.index]
-    )
+    id_ = f"{request.inmate_jurisdiction}-{request.inmate_id}-{request.index}"
 
     # package ID barcode
     box = Box(0.01 * width, 0.01 * height, 0.99 * width, 0.50 * height)
