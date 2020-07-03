@@ -18,7 +18,7 @@ import ibp
 
 
 def parse_date(date):
-    return datetime.strptime(date, '%Y-%m-%d').date()
+    return datetime.strptime(date, "%Y-%m-%d").date()
 
 
 def parse_date_or_None(date):
@@ -47,13 +47,12 @@ def units_length(connection):
 
 def generate_units(connection):
     sql = """
-        SELECT
-            autoid, name, jurisdiction, url, shipping_method,
-            street1, street2, city, zipcode, state
+        SELECT autoid, name, jurisdiction, url, shipping_method,
+               street1, street2, city, zipcode, state
         FROM units
     """
     for unit in connection.execute(sql):
-        unit['id'] = unit.pop('autoid')
+        unit["id"] = unit.pop("autoid")
         yield ibp.models.Unit(**unit)
 
 
@@ -65,10 +64,10 @@ def generate_comments(connection, inmate_autoid):
     """
     comments = connection.execute(sql)
     for index, comment in enumerate(comments):
-        comment.pop('inmate_id')
-        comment.pop('autoid')
-        comment['index'] = index
-        comment['datetime'] = parse_datetime(comment['datetime'])
+        comment.pop("inmate_id")
+        comment.pop("autoid")
+        comment["index"] = index
+        comment["datetime"] = parse_datetime(comment["datetime"])
         yield ibp.models.Comment(**comment)
 
 
@@ -80,26 +79,28 @@ def shipments_length(connection):
 def generate_shipments(connection):
     shipments = connection.execute("SELECT * FROM shipments")
     for shipment in shipments:
-        shipment['id'] = shipment.pop('autoid')
-        shipment['date_shipped'] = parse_date(shipment['date_shipped'])
+        shipment["id"] = shipment.pop("autoid")
+        shipment["date_shipped"] = parse_date(shipment["date_shipped"])
         yield ibp.models.Shipment(**shipment)
 
 
 def generate_requests(connection, inmate_autoid):
-    requests = connection.execute(f"""
+    sql = f"""
         SELECT * FROM requests
         WHERE inmate_autoid = {inmate_autoid}
         ORDER BY date_postmarked ASC
-    """)
+    """
+
+    requests = connection.execute(sql)
 
     for index, request in enumerate(requests):
-        request.pop('inmate_autoid')
-        request.pop('autoid')
-        request['index'] = index
+        request.pop("inmate_autoid")
+        request.pop("autoid")
+        request["index"] = index
 
-        request['date_processed'] = parse_date(request['date_processed'])
-        request['date_postmarked'] = parse_date(request['date_postmarked'])
-        request['shipment_id'] = request.pop('shipment_autoid')
+        request["date_processed"] = parse_date(request["date_processed"])
+        request["date_postmarked"] = parse_date(request["date_postmarked"])
+        request["shipment_id"] = request.pop("shipment_autoid")
 
         yield ibp.models.Request(**request)
 
@@ -112,7 +113,7 @@ def inmates_length(connection):
 def generate_inmates(connection):
     inmates_sql = "SELECT autoid, id, jurisdiction FROM inmates"
     for inmate in connection.execute(inmates_sql):
-        autoid = inmate.pop('autoid')
+        autoid = inmate.pop("autoid")
         inmate = ibp.models.Inmate(**inmate)
         inmate.comments = list(generate_comments(connection, autoid))
         inmate.requests = list(generate_requests(connection, autoid))
@@ -123,7 +124,7 @@ def main():
     """Import data from IBP database"""
 
     parser = argparse.ArgumentParser(description=main.__doc__)
-    parser.add_argument('filepath', help="database filepath")
+    parser.add_argument("filepath", help="database filepath")
     args = parser.parse_args()
 
     ibp.db.create_all()
@@ -154,5 +155,5 @@ def main():
             ibp.db.session.commit()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
