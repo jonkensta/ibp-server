@@ -95,7 +95,6 @@ def generate_requests(connection, inmate_autoid):
 
     for index, request in enumerate(requests):
         request.pop("inmate_autoid")
-        request.pop("autoid")
         request["index"] = index
 
         request["date_processed"] = parse_date(request["date_processed"])
