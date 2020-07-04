@@ -1,14 +1,10 @@
-from __future__ import print_function
-
 import os
-import tempfile
 import argparse
-import itertools
-import subprocess
 from datetime import datetime
-from contextlib import closing
+from contextlib import closing, contextmanager
 
 import sqlite3
+import sqlalchemy
 from progressbar import ProgressBar
 
 local_dir = os.path.dirname(os.path.realpath(__file__))  # noqa
@@ -119,6 +115,24 @@ def generate_inmates(connection):
         yield inmate
 
 
+@contextmanager
+def build_session():
+    try:
+        session = ibp.db.Session()
+        yield session
+    except sqlalchemy.exc.SQLAlchemyError:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def create_db():
+    session = ibp.db.Session()
+    engine = session.get_bind()
+    ibp.models.Base.metadata.create_all(engine)
+
+
 def main():
     """Import data from IBP database"""
 
@@ -126,32 +140,37 @@ def main():
     parser.add_argument("filepath", help="database filepath")
     args = parser.parse_args()
 
-    ibp.db.create_all()
+    create_db()
 
     with closing(sqlite3.connect(args.filepath)) as connection:
         connection.row_factory = dict_factory
 
-        with ibp.app.app_context():
-            print("Adding units")
-            units = generate_units(connection)
-            progress = ProgressBar(max_value=units_length(connection))
-            units = progress(units)
-            ibp.db.session.add_all(units)
-            ibp.db.session.commit()
+        print("Adding units")
+        units = generate_units(connection)
+        progress = ProgressBar(max_value=units_length(connection))
+        units = progress(units)
 
-            print("Adding shipments")
-            shipments = generate_shipments(connection)
-            progress = ProgressBar(max_value=shipments_length(connection))
-            shipments = progress(shipments)
-            ibp.db.session.add_all(shipments)
-            ibp.db.session.commit()
+        with build_session() as session:
+            session.add_all(units)
+            session.commit()
 
-            print("Adding inmates")
-            inmates = generate_inmates(connection)
-            progress = ProgressBar(max_value=inmates_length(connection))
-            inmates = progress(inmates)
-            ibp.db.session.add_all(inmates)
-            ibp.db.session.commit()
+        print("Adding shipments")
+        shipments = generate_shipments(connection)
+        progress = ProgressBar(max_value=shipments_length(connection))
+        shipments = progress(shipments)
+
+        with build_session() as session:
+            session.add_all(shipments)
+            session.commit()
+
+        print("Adding inmates")
+        inmates = generate_inmates(connection)
+        progress = ProgressBar(max_value=inmates_length(connection))
+        inmates = progress(inmates)
+
+        with build_session() as session:
+            session.add_all(inmates)
+            session.commit()
 
 
 if __name__ == "__main__":
