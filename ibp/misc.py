@@ -159,18 +159,31 @@ def render_request_label(request, size=(1300, 500)):
     add_text(draw, box, id_)
 
     # inmate name
+    def get_inmate_name(inmate):
+        try:
+            assert inmate.first_name is not None and inmate.last_name is not None
+        except AssertionError:
+            return "Name: N/A"
+        else:
+            return " ".join([inmate.first_name, inmate.last_name])
+
     box = Box(0.01 * width, 0.60 * height, 0.99 * width, 0.90 * height)
-    name = " ".join([request.inmate.first_name, request.inmate.last_name])
-    add_text(draw, box, name)
+    add_text(draw, box, get_inmate_name(request.inmate))
 
     # other info at bottom
     box = Box(0.01 * width, 0.90 * height, 0.33 * width, 0.98 * height)
     add_text(draw, box, request.inmate.jurisdiction)
 
+    def get_unit_name(unit):
+        return unit.name if unit is not None else "Unit: N/A"
+
     box = Box(0.33 * width, 0.90 * height, 0.67 * width, 0.99 * height)
-    add_text(draw, box, request.inmate.unit.name)
+    add_text(draw, box, get_unit_name(request.inmate.unit))
+
+    def get_shipping_method(unit):
+        return unit.shipping_method if unit is not None else "Shipping: N/A"
 
     box = Box(0.67 * width, 0.90 * height, 0.99 * width, 0.99 * height)
-    add_text(draw, box, request.inmate.unit.shipping_method)
+    add_text(draw, box, get_shipping_method(request.inmate.unit))
 
     return image
