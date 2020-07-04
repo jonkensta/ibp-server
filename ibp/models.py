@@ -351,7 +351,7 @@ class Request(Base, HasInmateIndexKey):
 
     """
 
-    autoid = Column(Integer, primary_key=True)
+    autoid = Column(Integer)
     """Deprecated numeric identifier for compatibility with old labels."""
 
     shipment = relationship("Shipment", uselist=False)
