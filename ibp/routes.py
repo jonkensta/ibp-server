@@ -54,12 +54,13 @@ from . import schemas
 
 from .base import config
 
+# setup bottle application
+app = bottle.Bottle()  # pylint: disable=invalid-name
+
+
 ###########
 # Plugins #
 ###########
-
-# setup bottle application
-app = bottle.Bottle()  # pylint: disable=invalid-name
 
 
 def create_sqlalchemy_session(callback):
@@ -73,7 +74,7 @@ def create_sqlalchemy_session(callback):
             body = callback(session, *args, **kwargs)
         except sqlalchemy.exc.SQLAlchemyError as exc:
             session.rollback()
-            raise bottle.HTTPError(500, json.dumps("A database error occurred."), exc)
+            raise bottle.HTTPError(500, "A database error occurred.", exc)
         finally:
             session.close()
 
@@ -83,20 +84,7 @@ def create_sqlalchemy_session(callback):
 
 
 app.install(create_sqlalchemy_session)
-
-
-def use_json_as_response_type(callback):
-    """Bottle plugin for setting json as the response type."""
-
-    @functools.wraps(callback)
-    def wrapper(*args, **kwargs):
-        bottle.response.content_type = "application/json"
-        return callback(*args, **kwargs)
-
-    return wrapper
-
-
-app.install(use_json_as_response_type)
+app.install(bottle.JSONPlugin())
 
 
 def send_bytes(bytes_, mimetype):
@@ -114,10 +102,17 @@ def send_bytes(bytes_, mimetype):
 ##################
 
 
-@use_json_as_response_type
 def default_error_handler(error):
     """Handle Bottle errors by setting status code and returning body."""
+    bottle.response.content_type = "application/json"
     bottle.response.status = error.status
+
+    if isinstance(error.body, list):
+        return json.dumps({"messages": error.body})
+
+    if isinstance(error.body, str):
+        return json.dumps({"messages": [error.body]})
+
     return error.body
 
 
@@ -145,7 +140,7 @@ def load_inmate_from_url_params(route):
             try:
                 inmate = inmates.filter_by(jurisdiction=jurisdiction).one()
             except sqlalchemy.orm.exc.NoResultFound as exc:
-                raise bottle.HTTPError(404, json.dumps("Page not found"), exc)
+                raise bottle.HTTPError(404, "Page not found", exc)
 
         return route(session, inmate)
 
@@ -164,7 +159,7 @@ def load_cls_from_url_params(cls):
             try:
                 result = query.one()
             except sqlalchemy.orm.exc.NoResultFound as exc:
-                raise bottle.HTTPError(404, json.dumps("Page not found"), exc)
+                raise bottle.HTTPError(404, "Page not found", exc)
 
             return route(session, result)
 
@@ -209,14 +204,14 @@ def show_inmate(session, jurisdiction, inmate_id):
         try:
             inmate = inmates.filter_by(jurisdiction=jurisdiction).one()
         except sqlalchemy.orm.exc.NoResultFound as exc:
-            raise bottle.HTTPError(404, json.dumps("Page not found"), exc)
+            raise bottle.HTTPError(404, "Page not found", exc)
 
     errors = []
     if inmate.db_entry_is_stale():
         inmates, errors = db.query_providers_by_id(session, inmate_id)
         inmate = inmates.filter_by(jurisdiction=jurisdiction).one()
 
-    return json.dumps({"errors": errors, "inmate": schemas.inmate.dump(inmate)})
+    return {"errors": errors, "inmate": schemas.inmate.dump(inmate)}
 
 
 @app.get("/inmate")
@@ -225,7 +220,7 @@ def search_inmates(session):
     search = bottle.request.query.get("query")
 
     if not search:
-        raise bottle.HTTPError(400, json.dumps("Some search input must be provided"))
+        raise bottle.HTTPError(400, "Some search input must be provided")
 
     try:
         inmate_id = int(search.replace("-", ""))
@@ -236,11 +231,11 @@ def search_inmates(session):
 
         if not (name.first and name.last):
             message = "If using a name, please specify first and last name"
-            raise bottle.HTTPError(400, json.dumps(message))
+            raise bottle.HTTPError(400, message)
 
         inmates, errors = db.query_providers_by_name(session, name.first, name.last)
 
-    return json.dumps({"inmates": schemas.inmates.dump(inmates), "errors": errors})
+    return {"inmates": schemas.inmates.dump(inmates), "errors": errors}
 
 
 ##################
@@ -255,7 +250,7 @@ def create_request(session, inmate):
     try:
         fields = schemas.request.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, json.dumps(exc.messages), exc)
+        raise bottle.HTTPError(400, exc.messages, exc)
 
     index = misc.get_next_available_index(item.index for item in inmate.requests)
     request = models.Request(index=index, date_processed=date.today(), **fields)
@@ -264,7 +259,7 @@ def create_request(session, inmate):
     session.add(request)
     session.commit()
 
-    return schemas.request.dumps(request)
+    return schemas.request.dump(request)
 
 
 @app.delete("/request/<jurisdiction>/<inmate_id:int>/<index:int>")
@@ -282,13 +277,13 @@ def update_request(session, request):
     try:
         fields = schemas.request.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, json.dumps(exc.messages), exc)
+        raise bottle.HTTPError(400, exc.messages, exc)
 
     request.update_from_kwargs(**fields)
     session.add(request)
     session.commit()
 
-    return schemas.request.dumps(request)
+    return schemas.request.dump(request)
 
 
 @app.get("/request/<jurisdiction>/<inmate_id:int>/<index:int>/label")
@@ -328,7 +323,7 @@ def create_comment(session, inmate):
     try:
         fields = schemas.comment.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, json.dumps(exc.messages), exc)
+        raise bottle.HTTPError(400, exc.messages, exc)
 
     index = misc.get_next_available_index(item.index for item in inmate.comments)
     comment = models.Comment(index=index, datetime=datetime.now(), **fields)
@@ -337,7 +332,7 @@ def create_comment(session, inmate):
     session.add(comment)
     session.commit()
 
-    return schemas.comment.dumps(comment)
+    return schemas.comment.dump(comment)
 
 
 @app.delete("/comment/<jurisdiction>/<inmate_id:int>/<index:int>")
@@ -355,13 +350,13 @@ def update_comment(session, comment):
     try:
         fields = schemas.comment.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, json.dumps(exc.messages), exc)
+        raise bottle.HTTPError(400, exc.messages, exc)
 
     comment.update_from_kwargs(**fields)
     session.add(comment)
     session.commit()
 
-    return schemas.comment.dumps(comment)
+    return schemas.comment.dump(comment)
 
 
 ###############
