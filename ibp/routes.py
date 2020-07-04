@@ -311,6 +311,18 @@ def ship_request(session, request):  # pylint: disable=unused-argument
     raise NotImplementedError
 
 
+@app.get("/request/<autoid:int>/address")
+def get_request_address_autoid(session, autoid):
+    """Get the address for shipping a request given the request autoid."""
+    raise NotImplementedError
+
+
+@app.post("/request/<autoid:int>/ship")
+def ship_request_autoid(session, autoid):
+    """Ship a request given its autoid."""
+    raise NotImplementedError
+
+
 ##################
 # Comment routes #
 ##################
