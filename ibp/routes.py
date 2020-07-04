@@ -381,9 +381,11 @@ def ship_to_unit(session, id):  # pylint: disable=redefined-builtin, invalid-nam
 ################
 
 
-@app.get("/config")
-def get_warnings_config(session):  # pylint: disable=unused-argument
+@app.get("/config", skip=[create_sqlalchemy_session])
+def get_config():  # pylint: disable=unused-argument
     """Get server warnings configuration."""
-    keys, values = config["warnings"].keys(), config["warnings"].values()
-    warnings_config = {key: int(value) for key, value in zip(keys, values)}
-    return json.dumps(warnings_config)
+    warnings_keys = config["warnings"].keys()
+    warnings_vals = map(int, config["warnings"].values())
+    warnings = dict(zip(warnings_keys, warnings_vals))
+    address = dict(config["address"])
+    return {"warnings": warnings, "address": address}
