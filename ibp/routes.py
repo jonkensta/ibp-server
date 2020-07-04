@@ -370,6 +370,12 @@ def get_unit_address(session, id):  # pylint: disable=redefined-builtin, invalid
     raise NotImplementedError
 
 
+@app.get("/unit/<id:int>/ship")
+def ship_to_unit(session, id):  # pylint: disable=redefined-builtin, invalid-name
+    """Get bulk shipping address of a unit."""
+    raise NotImplementedError
+
+
 ################
 # Misc. routes #
 ################
