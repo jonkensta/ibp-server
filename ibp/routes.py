@@ -291,7 +291,7 @@ def update_request(session, request):
     return schemas.request.dumps(request)
 
 
-@app.get("/label/<jurisdiction>/<inmate_id:int>/<index:int>")
+@app.get("/request/<jurisdiction>/<inmate_id:int>/<index:int>/label")
 @load_cls_from_url_params(models.Request)
 def get_request_label(session, request):  # pylint: disable=unused-argument
     """Get a label for a request."""
@@ -300,6 +300,20 @@ def get_request_label(session, request):  # pylint: disable=unused-argument
     label.save(label_bytes_io, "PNG")
     label_bytes = label_bytes_io.getvalue()
     return send_bytes(label_bytes, "image/png")
+
+
+@app.get("/request/<jurisdiction>/<inmate_id:int>/<index:int>/address")
+@load_cls_from_url_params(models.Request)
+def get_request_address(session, request):  # pylint: disable=unused-argument
+    """Get the address for shipping a request."""
+    raise NotImplementedError
+
+
+@app.post("/request/<jurisdiction>/<inmate_id:int>/<index:int>/ship")
+@load_cls_from_url_params(models.Request)
+def ship_request(session, request):  # pylint: disable=unused-argument
+    """Ship a request."""
+    raise NotImplementedError
 
 
 ##################
@@ -348,6 +362,17 @@ def update_comment(session, comment):
     session.commit()
 
     return schemas.comment.dumps(comment)
+
+
+###############
+# Unit routes #
+###############
+
+
+@app.get("/unit/<id:int>/address")
+def get_unit_address(session, id):  # pylint: disable=redefined-builtin, invalid-name
+    """Get bulk shipping address of a unit."""
+    raise NotImplementedError
 
 
 ################
