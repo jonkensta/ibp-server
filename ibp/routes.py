@@ -40,6 +40,7 @@ as inputs.
 import io
 import json
 import functools
+import traceback
 from datetime import date, datetime
 
 import bottle
@@ -104,6 +105,8 @@ def send_bytes(bytes_, mimetype):
 
 def default_error_handler(error):
     """Handle Bottle errors by setting status code and returning body."""
+    traceback.print_exc()
+
     bottle.response.content_type = "application/json"
     bottle.response.status = error.status
 
