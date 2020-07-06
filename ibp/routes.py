@@ -540,7 +540,7 @@ def get_units(session):
 
 
 @app.get("/config", skip=[create_sqlalchemy_session])
-def get_config():  # pylint: disable=unused-argument
+def get_config():
     """Get server warnings configuration."""
     warnings_keys = config["warnings"].keys()
     warnings_vals = map(int, config["warnings"].values())
