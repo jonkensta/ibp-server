@@ -150,6 +150,23 @@ def load_inmate_from_url_params(route):
     return wrapper
 
 
+def load_unit_from_url_params(route):
+    """Decorate a route to load an inmate from URL parameters."""
+
+    @functools.wraps(route)
+    def wrapper(session, id):  # pylint: disable=redefined-builtin, invalid-name
+        query = session.query(models.Unit).filter_by(id=id)
+
+        try:
+            unit = query.one()
+        except sqlalchemy.orm.exc.NoResultFound as exc:
+            raise bottle.HTTPError(404, "Unit not found", exc)
+
+        return route(session, unit)
+
+    return wrapper
+
+
 def load_cls_from_url_params(cls):
     """Decorate a route to load a given model from URL parameters."""
 
