@@ -301,26 +301,117 @@ def get_request_label(session, request):  # pylint: disable=unused-argument
 @load_cls_from_url_params(models.Request)
 def get_request_address(session, request):  # pylint: disable=unused-argument
     """Get the address for shipping a request."""
-    raise NotImplementedError
+    inmate = request.inmate
+    if inmate.db_entry_is_stale():
+        db.query_providers_by_id(session, inmate.id)
+
+    unit = inmate.unit
+    if unit is None:
+        raise bottle.HTTPError(400, "Inmate is not assigned to a unit.")
+
+    try:
+        assert inmate.first_name is not None and inmate.last_name is not None
+    except AssertionError:
+        inmate_name = f"Inmate #{inmate.id:08d}"
+    else:
+        first, last = inmate.first_name.title(), inmate.last_name.title()
+        inmate_name = f"{first} {last} #{inmate.id:08d}"
+
+    return {
+        "name": inmate_name,
+        "street1": unit.street1,
+        "street2": unit.street2,
+        "city": unit.city,
+        "state": unit.state,
+        "zipcode": unit.zipcode,
+    }
 
 
 @app.post("/request/<jurisdiction>/<inmate_id:int>/<index:int>/ship")
 @load_cls_from_url_params(models.Request)
 def ship_request(session, request):  # pylint: disable=unused-argument
     """Ship a request."""
-    raise NotImplementedError
+
+    inmate = request.inmate
+    if inmate.db_entry_is_stale():
+        db.query_providers_by_id(session, inmate.id)
+
+    unit = inmate.unit
+    if unit is None:
+        raise bottle.HTTPError(400, "Inmate is not assigned to a unit.")
+
+    try:
+        fields = schemas.shipment.load(bottle.request.json)
+    except marshmallow.exceptions.ValidationError as exc:
+        raise bottle.HTTPError(400, exc.messages, exc)
+
+    shipment = models.Shipment(request=request, unit=unit, **fields)
+    session.add(shipment)
+    session.commit()
+
+    return schemas.shipment.dump(shipment)
 
 
 @app.get("/request/<autoid:int>/address")
 def get_request_address_autoid(session, autoid):
     """Get the address for shipping a request given the request autoid."""
-    raise NotImplementedError
+    try:
+        request = session.query(models.Request).filter_by(autoid=autoid).one()
+    except sqlalchemy.orm.exc.NoResultFound as exc:
+        raise bottle.HTTPError(404, "Request not found.", exc)
+
+    inmate = request.inmate
+    if inmate.db_entry_is_stale():
+        db.query_providers_by_id(session, inmate.id)
+
+    unit = inmate.unit
+    if unit is None:
+        raise bottle.HTTPError(400, "Inmate is not assigned to a unit.")
+
+    try:
+        assert inmate.first_name is not None and inmate.last_name is not None
+    except AssertionError:
+        inmate_name = f"Inmate #{inmate.id:08d}"
+    else:
+        first, last = inmate.first_name.title(), inmate.last_name.title()
+        inmate_name = f"{first} {last} #{inmate.id:08d}"
+
+    return {
+        "name": inmate_name,
+        "street1": unit.street1,
+        "street2": unit.street2,
+        "city": unit.city,
+        "state": unit.state,
+        "zipcode": unit.zipcode,
+    }
 
 
 @app.post("/request/<autoid:int>/ship")
 def ship_request_autoid(session, autoid):
     """Ship a request given its autoid."""
-    raise NotImplementedError
+    try:
+        request = session.query(models.Request).filter_by(autoid=autoid).one()
+    except sqlalchemy.orm.exc.NoResultFound as exc:
+        raise bottle.HTTPError(404, "Request not found.", exc)
+
+    inmate = request.inmate
+    if inmate.db_entry_is_stale():
+        db.query_providers_by_id(session, inmate.id)
+
+    unit = inmate.unit
+    if unit is None:
+        raise bottle.HTTPError(400, "Inmate is not assigned to a unit.")
+
+    try:
+        fields = schemas.shipment.load(bottle.request.json)
+    except marshmallow.exceptions.ValidationError as exc:
+        raise bottle.HTTPError(400, exc.messages, exc)
+
+    shipment = models.Shipment(request=request, unit=unit, **fields)
+    session.add(shipment)
+    session.commit()
+
+    return schemas.shipment.dump(shipment)
 
 
 ##################

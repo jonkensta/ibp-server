@@ -92,6 +92,18 @@ class InmateSchema(Schema):
     requests = fields.Nested(RequestSchema, many=True)
 
 
+class ShipmentSchema(Schema):
+    """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Shipment`."""
+
+    date_shipped = fields.Date()
+
+    tracking_url = fields.Str()
+    tracking_code = fields.Str()
+
+    weight = fields.Int()
+    postage = fields.Int()
+
+
 request = RequestSchema(unknown="EXCLUDE")
 """Schema object for marshalling single :py:class:`ibp.models.Request` objects."""
 
@@ -105,3 +117,6 @@ inmates = InmateSchema(
     many=True, only=["jurisdiction", "id", "first_name", "last_name", "unit.name"]
 )
 """Schema object for marshalling multiple :py:class:`ibp.models.Inmate` objects."""
+
+shipment = ShipmentSchema(unknown="EXCLUDE")
+"""Schema object for marshalling single :py:class:`ibp.models.Shipment` objects."""
