@@ -491,15 +491,40 @@ def update_comment(session, comment):
 
 
 @app.get("/unit/<id:int>/address")
-def get_unit_address(session, id):  # pylint: disable=redefined-builtin, invalid-name
+@load_unit_from_url_params
+def get_unit_address(session, unit):  # pylint: disable=unused-argument
     """Get bulk shipping address of a unit."""
-    raise NotImplementedError
+    try:
+        name = config["shipping"]["unit_address_name"]
+    except AttributeError:
+        name = "ATTN: Mailroom Staff"
+
+    return {
+        "name": name,
+        "street1": unit.street1,
+        "street2": unit.street2,
+        "city": unit.city,
+        "state": unit.state,
+        "zipcode": unit.zipcode,
+    }
 
 
-@app.get("/unit/<id:int>/ship")
-def ship_to_unit(session, id):  # pylint: disable=redefined-builtin, invalid-name
-    """Get bulk shipping address of a unit."""
-    raise NotImplementedError
+@app.post("/unit/<id:int>/ship")
+@load_unit_from_url_params
+def ship_to_unit(session, unit):
+    """Ship a bulk package to a unit."""
+    try:
+        fields = schemas.shipment.load(bottle.request.json)
+    except marshmallow.exceptions.ValidationError as exc:
+        raise bottle.HTTPError(400, exc.messages, exc)
+
+    shipment = models.Shipment(
+        requests=[], unit=unit, date_shipped=date.today(), **fields
+    )
+    session.add(shipment)
+    session.commit()
+
+    return schemas.shipment.dump(shipment)
 
 
 ################
