@@ -527,6 +527,13 @@ def ship_to_unit(session, unit):
     return schemas.shipment.dump(shipment)
 
 
+@app.get("/units")
+def get_units(session):
+    """Get list of units."""
+    units = session.query(models.Unit)
+    return {"units": schemas.units.dump(units)}
+
+
 ################
 # Misc. routes #
 ################
