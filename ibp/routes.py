@@ -351,7 +351,6 @@ def get_request_address(session, request):  # pylint: disable=unused-argument
 @load_cls_from_url_params(models.Request)
 def ship_request(session, request):  # pylint: disable=unused-argument
     """Ship a request."""
-
     inmate = request.inmate
     if inmate.db_entry_is_stale():
         db.query_providers_by_id(session, inmate.id)
