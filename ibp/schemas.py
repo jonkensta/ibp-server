@@ -115,10 +115,13 @@ comment = CommentSchema(unknown="EXCLUDE")
 inmate = InmateSchema()
 """Schema object for marshalling single :py:class:`ibp.models.Inmate` objects."""
 
+shipment = ShipmentSchema(unknown="EXCLUDE")
+"""Schema object for marshalling single :py:class:`ibp.models.Shipment` objects."""
+
+units = UnitSchema(many=True, only=["id", "name"])
+"""Schema object for marshalling multiple :py:class:`ibp.models.Unit` objects."""
+
 inmates = InmateSchema(
     many=True, only=["jurisdiction", "id", "first_name", "last_name", "unit.name"]
 )
 """Schema object for marshalling multiple :py:class:`ibp.models.Inmate` objects."""
-
-shipment = ShipmentSchema(unknown="EXCLUDE")
-"""Schema object for marshalling single :py:class:`ibp.models.Shipment` objects."""
