@@ -364,7 +364,9 @@ def ship_request(session, request):  # pylint: disable=unused-argument
     except marshmallow.exceptions.ValidationError as exc:
         raise bottle.HTTPError(400, exc.messages, exc)
 
-    shipment = models.Shipment(request=request, unit=unit, **fields)
+    shipment = models.Shipment(
+        requests=[request], date_shipped=date.today(), unit=unit, **fields
+    )
     session.add(shipment)
     session.commit()
 
@@ -426,7 +428,9 @@ def ship_request_autoid(session, autoid):
     except marshmallow.exceptions.ValidationError as exc:
         raise bottle.HTTPError(400, exc.messages, exc)
 
-    shipment = models.Shipment(request=request, unit=unit, **fields)
+    shipment = models.Shipment(
+        request=request, unit=unit, date_shipped=date.today(), **fields
+    )
     session.add(shipment)
     session.commit()
 
