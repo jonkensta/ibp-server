@@ -24,6 +24,8 @@ from . import warnings
 class UnitSchema(Schema):
     """:py:mod:`marshmallow` schema for :py:class:`ibp.models.Unit`."""
 
+    id = fields.Int(dump_only=True)
+
     name = fields.Str()
     """Unit name encoded as a string."""
 
