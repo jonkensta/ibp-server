@@ -22,6 +22,6 @@ def read_server_config():
 config = read_server_config()  # pylint: disable=invalid-name
 
 # pylint: disable=unused-import, wrong-import-position
-from . import models
-from . import routes
-from .routes import app
+from . import models  # noqa: F401, E402
+from . import routes  # noqa: F401, E402
+from .routes import app  # noqa: F401, E402
