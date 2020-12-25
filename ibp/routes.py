@@ -171,7 +171,9 @@ def load_cls_from_url_params(cls):
         @functools.wraps(route)
         def wrapper(session, jurisdiction, inmate_id, index):
             query = session.query(cls).filter_by(
-                inmate_jurisdiction=jurisdiction, inmate_id=inmate_id, index=index,
+                inmate_jurisdiction=jurisdiction,
+                inmate_id=inmate_id,
+                index=index,
             )
             try:
                 result = query.one()
@@ -203,6 +205,8 @@ def show_inmate(session, jurisdiction, inmate_id):
     :param inmate_id: Inmate numeric identifier.
     :type inmate_id: int
 
+    This is used to load the appropriate inmate.
+
     :returns: :py:mod:`bottle` JSON response containing the following fields:
 
         - :py:data:`inmate` JSON encoding of the inmate information.
@@ -233,7 +237,21 @@ def show_inmate(session, jurisdiction, inmate_id):
 
 @app.get("/inmate")
 def search_inmates(session):
-    """:py:mod:`bottle` route to handle a GET request for an inmate search."""
+    """:py:mod:`bottle` route to handle a GET request for an inmate search.
+
+    This :py:mod:`bottle` route uses the following GET parameter:
+
+    :param query: The inmate query string.
+    :type query: str
+
+    This is used as the query for the inmate search.
+
+    :returns: :py:mod:`bottle` JSON response containing the following fields:
+
+        - :py:data:`inmates` JSON encoding of the list of inmates.
+        - :py:data:`errors` List of error strings encountered during search.
+
+    """
     search = bottle.request.query.get("query")
 
     if not search:
@@ -248,7 +266,7 @@ def search_inmates(session):
 
         if not (name.first and name.last):
             message = "If using a name, please specify first and last name"
-            raise bottle.HTTPError(400, message)
+            raise bottle.HTTPError(400, message)  # pylint: disable=raise-missing-from
 
         inmates, errors = db.query_providers_by_name(session, name.first, name.last)
 
@@ -263,7 +281,22 @@ def search_inmates(session):
 @app.post("/request/<jurisdiction>/<inmate_id:int>")
 @load_inmate_from_url_params
 def create_request(session, inmate):
-    """Create a request."""
+    """:py:mod:`bottle` route to handle creating a request.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param jurisdiction: Political system that houses the inmate.
+    :type jurisdiction: str
+
+    :param inmate_id: Inmate numeric identifier.
+    :type inmate_id: int
+
+    This is used to load the appropriate inmate for request creation.
+
+    :returns: :py:mod:`bottle` JSON response containing the request information.
+
+    """
     try:
         fields = schemas.request.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
@@ -282,7 +315,25 @@ def create_request(session, inmate):
 @app.delete("/request/<jurisdiction>/<inmate_id:int>/<index:int>")
 @load_cls_from_url_params(models.Request)
 def delete_request(session, request):
-    """Delete a request."""
+    """:py:mod:`bottle` route to handle deleting a request.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param jurisdiction: Political system that houses the inmate.
+    :type jurisdiction: str
+
+    :param inmate_id: Inmate numeric identifier.
+    :type inmate_id: int
+
+    :param request_index: Request index.
+    :type request_index: int
+
+    This is used to load the appropriate request for deletion.
+
+    :returns: None.
+
+    """
     session.delete(request)
     session.commit()
 
@@ -290,7 +341,25 @@ def delete_request(session, request):
 @app.put("/request/<jurisdiction>/<inmate_id:int>/<index:int>")
 @load_cls_from_url_params(models.Request)
 def update_request(session, request):
-    """Update a request."""
+    """:py:mod:`bottle` route to handle updating a request.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param jurisdiction: Political system that houses the inmate.
+    :type jurisdiction: str
+
+    :param inmate_id: Inmate numeric identifier.
+    :type inmate_id: int
+
+    :param request_index: Request index.
+    :type request_index: int
+
+    This is used to load the appropriate request for updating.
+
+    :returns: :py:mod:`bottle` JSON response containing the request information.
+
+    """
     try:
         fields = schemas.request.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
@@ -306,7 +375,25 @@ def update_request(session, request):
 @app.get("/request/<jurisdiction>/<inmate_id:int>/<index:int>/label")
 @load_cls_from_url_params(models.Request)
 def get_request_label(session, request):  # pylint: disable=unused-argument
-    """Get a label for a request."""
+    """:py:mod:`bottle` route to get a label for a request.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param jurisdiction: Political system that houses the inmate.
+    :type jurisdiction: str
+
+    :param inmate_id: Inmate numeric identifier.
+    :type inmate_id: int
+
+    :param request_index: Request index.
+    :type request_index: int
+
+    This is used to load the appropriate request.
+
+    :returns: :py:mod:`bottle` image/png bytes object.
+
+    """
     label = misc.render_request_label(request)
     label_bytes_io = io.BytesIO()
     label.save(label_bytes_io, "PNG")
@@ -317,7 +404,25 @@ def get_request_label(session, request):  # pylint: disable=unused-argument
 @app.get("/request/<jurisdiction>/<inmate_id:int>/<index:int>/address")
 @load_cls_from_url_params(models.Request)
 def get_request_address(session, request):  # pylint: disable=unused-argument
-    """Get the address for shipping a request."""
+    """:py:mod:`bottle` route to get the address for a request.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param jurisdiction: Political system that houses the inmate.
+    :type jurisdiction: str
+
+    :param inmate_id: Inmate numeric identifier.
+    :type inmate_id: int
+
+    :param request_index: Request index.
+    :type request_index: int
+
+    This is used to load the appropriate request.
+
+    :returns: :py:mod:`bottle` JSON response containing the request address information.
+
+    """
     inmate = request.inmate
     if inmate.db_entry_is_stale():
         db.query_providers_by_id(session, inmate.id)
@@ -326,13 +431,11 @@ def get_request_address(session, request):  # pylint: disable=unused-argument
     if unit is None:
         raise bottle.HTTPError(400, "Inmate is not assigned to a unit.")
 
-    try:
-        assert inmate.first_name is not None and inmate.last_name is not None
-    except AssertionError:
-        inmate_name = f"Inmate #{inmate.id:08d}"
-    else:
+    if not (inmate.first_name is None or inmate.last_name is None):
         first, last = inmate.first_name.title(), inmate.last_name.title()
         inmate_name = f"{first} {last} #{inmate.id:08d}"
+    else:
+        inmate_name = f"Inmate #{inmate.id:08d}"
 
     return {
         "name": inmate_name,
@@ -347,7 +450,25 @@ def get_request_address(session, request):  # pylint: disable=unused-argument
 @app.post("/request/<jurisdiction>/<inmate_id:int>/<index:int>/ship")
 @load_cls_from_url_params(models.Request)
 def ship_request(session, request):  # pylint: disable=unused-argument
-    """Ship a request."""
+    """:py:mod:`bottle` route to ship a request.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param jurisdiction: Political system that houses the inmate.
+    :type jurisdiction: str
+
+    :param inmate_id: Inmate numeric identifier.
+    :type inmate_id: int
+
+    :param request_index: Request index.
+    :type request_index: int
+
+    This is used to load the appropriate request.
+
+    :returns: :py:mod:`bottle` JSON response containing the shipment information.
+
+    """
     inmate = request.inmate
     if inmate.db_entry_is_stale():
         db.query_providers_by_id(session, inmate.id)
@@ -372,7 +493,19 @@ def ship_request(session, request):  # pylint: disable=unused-argument
 
 @app.get("/request/<autoid:int>/address")
 def get_request_address_autoid(session, autoid):
-    """Get the address for shipping a request given the request autoid."""
+    """:py:mod:`bottle` route to get an address for shipping a request given its autoid.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param request_autoid: Request database autoid.
+    :type request_autoid: int
+
+    This is used to load the appropriate request.
+
+    :returns: :py:mod:`bottle` JSON response containing the request address.
+
+    """
     try:
         request = session.query(models.Request).filter_by(autoid=autoid).one()
     except sqlalchemy.orm.exc.NoResultFound as exc:
@@ -406,7 +539,19 @@ def get_request_address_autoid(session, autoid):
 
 @app.post("/request/<autoid:int>/ship")
 def ship_request_autoid(session, autoid):
-    """Ship a request given its autoid."""
+    """:py:mod:`bottle` route to ship a request given its autoid.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param request_autoid: Request database autoid.
+    :type request_autoid: int
+
+    This is used to load the appropriate request.
+
+    :returns: :py:mod:`bottle` JSON response containing the shipment.
+
+    """
     try:
         request = session.query(models.Request).filter_by(autoid=autoid).one()
     except sqlalchemy.orm.exc.NoResultFound as exc:
@@ -442,7 +587,22 @@ def ship_request_autoid(session, autoid):
 @app.post("/comment/<jurisdiction>/<inmate_id:int>")
 @load_inmate_from_url_params
 def create_comment(session, inmate):
-    """Create a comment."""
+    """:py:mod:`bottle` route to handle creating a comment.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param jurisdiction: Political system that houses the inmate.
+    :type jurisdiction: str
+
+    :param inmate_id: Inmate numeric identifier.
+    :type inmate_id: int
+
+    This is used to load the appropriate inmate for creating the comment.
+
+    :returns: :py:mod:`bottle` JSON response containing the comment information.
+
+    """
     try:
         fields = schemas.comment.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
@@ -461,7 +621,25 @@ def create_comment(session, inmate):
 @app.delete("/comment/<jurisdiction>/<inmate_id:int>/<index:int>")
 @load_cls_from_url_params(models.Comment)
 def delete_comment(session, comment):
-    """Delete a comment."""
+    """:py:mod:`bottle` route to handle deleting a comment.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param jurisdiction: Political system that houses the inmate.
+    :type jurisdiction: str
+
+    :param inmate_id: Inmate numeric identifier.
+    :type inmate_id: int
+
+    :param comment_index: Comment index.
+    :type comment_index: int
+
+    This is used to load the appropriate comment for deleting.
+
+    :returns: None.
+
+    """
     session.delete(comment)
     session.commit()
 
@@ -469,7 +647,25 @@ def delete_comment(session, comment):
 @app.put("/comment/<jurisdiction>/<inmate_id:int>/<index:int>")
 @load_cls_from_url_params(models.Comment)
 def update_comment(session, comment):
-    """Update a comment."""
+    """:py:mod:`bottle` route to handle updating a comment.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param jurisdiction: Political system that houses the inmate.
+    :type jurisdiction: str
+
+    :param inmate_id: Inmate numeric identifier.
+    :type inmate_id: int
+
+    :param comment_index: Comment index.
+    :type comment_index: int
+
+    This is used to load the appropriate comment for updating.
+
+    :returns: :py:mod:`bottle` JSON response containing the comment information.
+
+    """
     try:
         fields = schemas.comment.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
@@ -490,7 +686,17 @@ def update_comment(session, comment):
 @app.get("/unit/<id:int>/address")
 @load_unit_from_url_params
 def get_unit_address(session, unit):  # pylint: disable=unused-argument
-    """Get bulk shipping address of a unit."""
+    """:py:mod:`bottle` route to get the bulk shipping address for a unit.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param unit_id: Unit numeric identifier.
+    :type unit_id: int
+
+    :returns: :py:mod:`bottle` JSON response containing the unit bulk shipping address.
+
+    """
     try:
         name = config["shipping"]["unit_address_name"]
     except AttributeError:
@@ -509,7 +715,17 @@ def get_unit_address(session, unit):  # pylint: disable=unused-argument
 @app.post("/unit/<id:int>/ship")
 @load_unit_from_url_params
 def ship_to_unit(session, unit):
-    """Ship a bulk package to a unit."""
+    """:py:mod:`bottle` route for shipping a bulk package to a unit.
+
+    This :py:mod:`bottle` route uses the following parameters extracted from the
+    endpoint URL:
+
+    :param unit_id: Unit numeric identifier.
+    :type unit_id: int
+
+    :returns: :py:mod:`bottle` JSON response containing the bulk shipment information.
+
+    """
     try:
         fields = schemas.shipment.load(bottle.request.json)
     except marshmallow.exceptions.ValidationError as exc:
@@ -526,7 +742,11 @@ def ship_to_unit(session, unit):
 
 @app.get("/units")
 def get_units(session):
-    """Get list of units."""
+    """:py:mod:`bottle` route for getting a list of units.
+
+    :returns: :py:mod:`bottle` JSON response containing the list of units.
+
+    """
     units = session.query(models.Unit)
     return {"units": schemas.units.dump(units)}
 
@@ -538,7 +758,14 @@ def get_units(session):
 
 @app.get("/config", skip=[create_sqlalchemy_session])
 def get_config():
-    """Get server warnings configuration."""
+    """:py:mod:`bottle` route for getting the server configuration.
+
+    :returns: :py:mod:`bottle` JSON response containing the following:
+
+        - :py:data:`warnings` JSON encoding of the warnings configuration.
+        - :py:data:`address` JSON encoding of the return address.
+
+    """
     warnings_keys = config["warnings"].keys()
     warnings_vals = map(int, config["warnings"].values())
     warnings = dict(zip(warnings_keys, warnings_vals))
