@@ -160,12 +160,9 @@ def render_request_label(request, size=(1300, 500)):
 
     # inmate name
     def get_inmate_name(inmate):
-        try:
-            assert inmate.first_name is not None and inmate.last_name is not None
-        except AssertionError:
+        if inmate.first_name is None or inmate.last_name is None:
             return "Name: N/A"
-        else:
-            return " ".join([inmate.first_name, inmate.last_name])
+        return " ".join([inmate.first_name, inmate.last_name])
 
     box = Box(0.01 * width, 0.60 * height, 0.99 * width, 0.90 * height)
     add_text(draw, box, get_inmate_name(request.inmate))
