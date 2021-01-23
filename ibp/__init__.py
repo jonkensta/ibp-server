@@ -1,3 +1,3 @@
 """Initialize the Bottle app."""
 
-from .base import app, models, routes
+from .base import app, models, routes  # noqa: F401
