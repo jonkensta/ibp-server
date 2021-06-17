@@ -167,7 +167,7 @@ class Inmate(Base):
 
     """
 
-    unit = relationship("Unit", uselist=False)
+    unit = relationship("Unit", uselist=False, back_populates="inmates")
     """Prison unit holding the inmate."""
 
     # IBP-specific fields.
@@ -181,7 +181,9 @@ class Inmate(Base):
     comments = relationship("Comment", order_by="desc(Comment.datetime)")
     """List of comments on this inmate made by IBP volunteers."""
 
-    requests = relationship("Request", order_by="desc(Request.date_postmarked)")
+    requests = relationship(
+        "Request", order_by="desc(Request.date_postmarked)", back_populates="inmate"
+    )
     """List of requests made by this inmate."""
 
     @classmethod
@@ -341,7 +343,7 @@ class Request(Base, HasInmateIndexKey):
     action = Column(Action, nullable=False)
     """Action taken by the IBP volunteer in response to the request."""
 
-    inmate = relationship("Inmate", uselist=False)
+    inmate = relationship("Inmate", uselist=False, back_populates="requests")
     """Inmate that sent the request."""
 
     shipment_id = Column(Integer, ForeignKey("shipments.id"))
@@ -354,7 +356,7 @@ class Request(Base, HasInmateIndexKey):
     autoid = Column(Integer)
     """Deprecated numeric identifier for compatibility with old labels."""
 
-    shipment = relationship("Shipment", uselist=False)
+    shipment = relationship("Shipment", uselist=False, back_populates="requests")
     """Shipment containing this request's corresponding package."""
 
 
@@ -381,7 +383,7 @@ class Shipment(Base):
     postage = Column(Integer, nullable=False)
     """Postage of the shipment in US cents."""
 
-    requests = relationship("Request")
+    requests = relationship("Request", back_populates="shipment")
     """Lists of requests this shipment responds to."""
 
     unit_id = Column(Integer, ForeignKey("units.id"), default=None)
@@ -391,7 +393,7 @@ class Shipment(Base):
 
     """
 
-    unit = relationship("Unit", uselist=False)
+    unit = relationship("Unit", uselist=False, back_populates="shipments")
     """Unit that this shipment was sent to."""
 
 
@@ -440,8 +442,8 @@ class Unit(Base):
     shipping_method = Column(ShippingMethod)
     """Shipping method to use for this prison unit."""
 
-    inmates = relationship("Inmate")
+    inmates = relationship("Inmate", back_populates="unit")
     """List of inmates residing in this prison unit."""
 
-    shipments = relationship("Shipment")
+    shipments = relationship("Shipment", back_populates="unit")
     """List of shipments made to this prison unit."""
