@@ -13,14 +13,18 @@ from .base import get_toplevel_path
 # pylint: disable=invalid-name
 
 
-def build_sessionmaker():
-    """Build a sessionmaker for our sqlite database."""
+def create_engine():
+    """Create an engine for our sqlite database."""
     toplevel = get_toplevel_path()
     filepath = toplevel.joinpath("data.db").absolute()
     uri_parts = ("sqlite", "/", str(filepath), "", "", "")  # netloc needs to be "/".
     uri = urllib.parse.urlunparse(uri_parts)
-    engine = sqlalchemy.create_engine(uri)
-    return sessionmaker(bind=engine)
+    return sqlalchemy.create_engine(uri)
+
+
+def build_sessionmaker():
+    """Build a sessionmaker for our sqlite database."""
+    return sessionmaker(bind=create_engine())
 
 
 Session = build_sessionmaker()
