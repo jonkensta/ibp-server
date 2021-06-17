@@ -390,7 +390,7 @@ def get_request_label(session, request):  # pylint: disable=unused-argument
 
 @app.get("/request/<jurisdiction>/<inmate_id:int>/<index:int>/address")
 @load_cls_from_url_params(models.Request)
-def get_request_address(session, request):  # pylint: disable=unused-argument
+def get_request_address(session, request):
     """:py:mod:`bottle` route to get the address for a request.
 
     This :py:mod:`bottle` route uses the following parameters extracted from the
