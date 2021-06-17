@@ -42,10 +42,10 @@ import json
 import functools
 from datetime import date, datetime
 
-import bottle
-import nameparser
-import sqlalchemy
-import marshmallow
+import bottle  # type: ignore
+import nameparser  # type: ignore
+import sqlalchemy  # type: ignore
+import marshmallow  # type: ignore
 
 from . import db
 from . import misc
