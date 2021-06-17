@@ -108,12 +108,11 @@ def default_error_handler(error):
     bottle.response.status = error.status
 
     if isinstance(error.body, list):
-        return json.dumps({"messages": error.body})
+        messages = [str(message) for message in error.body]
+    else:
+        messages = [str(error.body)]
 
-    if isinstance(error.body, str):
-        return json.dumps({"messages": [error.body]})
-
-    return error.body
+    return json.dumps({"messages": messages})
 
 
 app.default_error_handler = default_error_handler
@@ -147,25 +146,28 @@ def load_inmate_from_url_params(route):
     return wrapper
 
 
+def one_or_404(query):
+    """Return a single result from a query or raise a 404 HTTP error."""
+    try:
+        return query.one()
+    except sqlalchemy.orm.exc.NoResultFound as exc:
+        raise bottle.HTTPError(404, "Unit not found", exc)
+
+
 def load_unit_from_url_params(route):
     """Decorate a route to load an inmate from URL parameters."""
 
     @functools.wraps(route)
     def wrapper(session, id):  # pylint: disable=redefined-builtin, invalid-name
         query = session.query(models.Unit).filter_by(id=id)
-
-        try:
-            unit = query.one()
-        except sqlalchemy.orm.exc.NoResultFound as exc:
-            raise bottle.HTTPError(404, "Unit not found", exc)
-
+        unit = one_or_404(query)
         return route(session, unit)
 
     return wrapper
 
 
-def load_cls_from_url_params(cls):
-    """Decorate a route to load a given model from URL parameters."""
+def load_cls_from_inmate_index(cls):
+    """Decorate a route to load a given model from inmate index URL parameters."""
 
     def decorator(route):
         @functools.wraps(route)
@@ -175,16 +177,77 @@ def load_cls_from_url_params(cls):
                 inmate_id=inmate_id,
                 index=index,
             )
-            try:
-                result = query.one()
-            except sqlalchemy.orm.exc.NoResultFound as exc:
-                raise bottle.HTTPError(404, "Page not found", exc)
-
+            result = one_or_404(query)
             return route(session, result)
 
         return wrapper
 
     return decorator
+
+
+def load_cls_from_autoid(cls):
+    """Decorate a route to load a given model from autoid URL parameters."""
+
+    def decorator(route):
+        @functools.wraps(route)
+        def wrapper(session, autoid):
+            query = session.query(cls).filter_by(autoid=autoid)
+            result = one_or_404(query)
+            return route(session, result)
+
+        return wrapper
+
+    return decorator
+
+
+def get_request_address(session, request):
+    """Get the address to fill a request."""
+    inmate = request.inmate
+    if inmate.db_entry_is_stale():
+        db.query_providers_by_id(session, inmate.id)
+
+    unit = inmate.unit
+    if unit is None:
+        raise bottle.HTTPError(400, "Inmate is not assigned to a unit.")
+
+    if not (inmate.first_name is None or inmate.last_name is None):
+        first, last = inmate.first_name.title(), inmate.last_name.title()
+        inmate_name = f"{first} {last} #{inmate.id:08d}"
+    else:
+        inmate_name = f"Inmate #{inmate.id:08d}"
+
+    return {
+        "name": inmate_name,
+        "street1": unit.street1,
+        "street2": unit.street2,
+        "city": unit.city,
+        "state": unit.state,
+        "zipcode": unit.zipcode,
+    }
+
+
+def ship_request(session, request):
+    """Ship a request."""
+    inmate = request.inmate
+    if inmate.db_entry_is_stale():
+        db.query_providers_by_id(session, inmate.id)
+
+    unit = inmate.unit
+    if unit is None:
+        raise bottle.HTTPError(400, "Inmate is not assigned to a unit.")
+
+    try:
+        fields = schemas.shipment.load(bottle.request.json)
+    except marshmallow.exceptions.ValidationError as exc:
+        raise bottle.HTTPError(400, exc.messages, exc)
+
+    shipment = models.Shipment(
+        requests=[request], date_shipped=date.today(), unit=unit, **fields
+    )
+    session.add(shipment)
+    session.commit()
+
+    return schemas.shipment.dump(shipment)
 
 
 #################
@@ -300,7 +363,7 @@ def create_request(session, inmate):
 
 
 @app.delete("/request/<jurisdiction>/<inmate_id:int>/<index:int>")
-@load_cls_from_url_params(models.Request)
+@load_cls_from_inmate_index(models.Request)
 def delete_request(session, request):
     """:py:mod:`bottle` route to handle deleting a request.
 
@@ -326,7 +389,7 @@ def delete_request(session, request):
 
 
 @app.put("/request/<jurisdiction>/<inmate_id:int>/<index:int>")
-@load_cls_from_url_params(models.Request)
+@load_cls_from_inmate_index(models.Request)
 def update_request(session, request):
     """:py:mod:`bottle` route to handle updating a request.
 
@@ -360,7 +423,7 @@ def update_request(session, request):
 
 
 @app.get("/request/<jurisdiction>/<inmate_id:int>/<index:int>/label")
-@load_cls_from_url_params(models.Request)
+@load_cls_from_inmate_index(models.Request)
 def get_request_label(session, request):  # pylint: disable=unused-argument
     """:py:mod:`bottle` route to get a label for a request.
 
@@ -389,8 +452,8 @@ def get_request_label(session, request):  # pylint: disable=unused-argument
 
 
 @app.get("/request/<jurisdiction>/<inmate_id:int>/<index:int>/address")
-@load_cls_from_url_params(models.Request)
-def get_request_address(session, request):
+@load_cls_from_inmate_index(models.Request)
+def get_request_address_inmate_index(session, request):
     """:py:mod:`bottle` route to get the address for a request.
 
     This :py:mod:`bottle` route uses the following parameters extracted from the
@@ -410,33 +473,12 @@ def get_request_address(session, request):
     :returns: :py:mod:`bottle` JSON response containing the request address information.
 
     """
-    inmate = request.inmate
-    if inmate.db_entry_is_stale():
-        db.query_providers_by_id(session, inmate.id)
-
-    unit = inmate.unit
-    if unit is None:
-        raise bottle.HTTPError(400, "Inmate is not assigned to a unit.")
-
-    if not (inmate.first_name is None or inmate.last_name is None):
-        first, last = inmate.first_name.title(), inmate.last_name.title()
-        inmate_name = f"{first} {last} #{inmate.id:08d}"
-    else:
-        inmate_name = f"Inmate #{inmate.id:08d}"
-
-    return {
-        "name": inmate_name,
-        "street1": unit.street1,
-        "street2": unit.street2,
-        "city": unit.city,
-        "state": unit.state,
-        "zipcode": unit.zipcode,
-    }
+    return get_request_address(session, request)
 
 
 @app.post("/request/<jurisdiction>/<inmate_id:int>/<index:int>/ship")
-@load_cls_from_url_params(models.Request)
-def ship_request(session, request):  # pylint: disable=unused-argument
+@load_cls_from_inmate_index(models.Request)
+def ship_request_inmate_index(session, request):
     """:py:mod:`bottle` route to ship a request.
 
     This :py:mod:`bottle` route uses the following parameters extracted from the
@@ -456,30 +498,12 @@ def ship_request(session, request):  # pylint: disable=unused-argument
     :returns: :py:mod:`bottle` JSON response containing the shipment information.
 
     """
-    inmate = request.inmate
-    if inmate.db_entry_is_stale():
-        db.query_providers_by_id(session, inmate.id)
-
-    unit = inmate.unit
-    if unit is None:
-        raise bottle.HTTPError(400, "Inmate is not assigned to a unit.")
-
-    try:
-        fields = schemas.shipment.load(bottle.request.json)
-    except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, exc.messages, exc)
-
-    shipment = models.Shipment(
-        requests=[request], date_shipped=date.today(), unit=unit, **fields
-    )
-    session.add(shipment)
-    session.commit()
-
-    return schemas.shipment.dump(shipment)
+    return ship_request(session, request)
 
 
 @app.get("/request/<autoid:int>/address")
-def get_request_address_autoid(session, autoid):
+@load_cls_from_autoid(models.Request)
+def get_request_address_autoid(session, request):
     """:py:mod:`bottle` route to get an address for shipping a request given its autoid.
 
     This :py:mod:`bottle` route uses the following parameters extracted from the
@@ -493,39 +517,12 @@ def get_request_address_autoid(session, autoid):
     :returns: :py:mod:`bottle` JSON response containing the request address.
 
     """
-    try:
-        request = session.query(models.Request).filter_by(autoid=autoid).one()
-    except sqlalchemy.orm.exc.NoResultFound as exc:
-        raise bottle.HTTPError(404, "Request not found.", exc)
-
-    inmate = request.inmate
-    if inmate.db_entry_is_stale():
-        db.query_providers_by_id(session, inmate.id)
-
-    unit = inmate.unit
-    if unit is None:
-        raise bottle.HTTPError(400, "Inmate is not assigned to a unit.")
-
-    try:
-        assert inmate.first_name is not None and inmate.last_name is not None
-    except AssertionError:
-        inmate_name = f"Inmate #{inmate.id:08d}"
-    else:
-        first, last = inmate.first_name.title(), inmate.last_name.title()
-        inmate_name = f"{first} {last} #{inmate.id:08d}"
-
-    return {
-        "name": inmate_name,
-        "street1": unit.street1,
-        "street2": unit.street2,
-        "city": unit.city,
-        "state": unit.state,
-        "zipcode": unit.zipcode,
-    }
+    return get_request_address(session, request)
 
 
 @app.post("/request/<autoid:int>/ship")
-def ship_request_autoid(session, autoid):
+@load_cls_from_autoid(models.Request)
+def ship_request_autoid(session, request):
     """:py:mod:`bottle` route to ship a request given its autoid.
 
     This :py:mod:`bottle` route uses the following parameters extracted from the
@@ -539,31 +536,7 @@ def ship_request_autoid(session, autoid):
     :returns: :py:mod:`bottle` JSON response containing the shipment.
 
     """
-    try:
-        request = session.query(models.Request).filter_by(autoid=autoid).one()
-    except sqlalchemy.orm.exc.NoResultFound as exc:
-        raise bottle.HTTPError(404, "Request not found.", exc)
-
-    inmate = request.inmate
-    if inmate.db_entry_is_stale():
-        db.query_providers_by_id(session, inmate.id)
-
-    unit = inmate.unit
-    if unit is None:
-        raise bottle.HTTPError(400, "Inmate is not assigned to a unit.")
-
-    try:
-        fields = schemas.shipment.load(bottle.request.json)
-    except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, exc.messages, exc)
-
-    shipment = models.Shipment(
-        request=request, unit=unit, date_shipped=date.today(), **fields
-    )
-    session.add(shipment)
-    session.commit()
-
-    return schemas.shipment.dump(shipment)
+    return ship_request(session, request)
 
 
 ##################
@@ -606,7 +579,7 @@ def create_comment(session, inmate):
 
 
 @app.delete("/comment/<jurisdiction>/<inmate_id:int>/<index:int>")
-@load_cls_from_url_params(models.Comment)
+@load_cls_from_inmate_index(models.Comment)
 def delete_comment(session, comment):
     """:py:mod:`bottle` route to handle deleting a comment.
 
@@ -632,7 +605,7 @@ def delete_comment(session, comment):
 
 
 @app.put("/comment/<jurisdiction>/<inmate_id:int>/<index:int>")
-@load_cls_from_url_params(models.Comment)
+@load_cls_from_inmate_index(models.Comment)
 def update_comment(session, comment):
     """:py:mod:`bottle` route to handle updating a comment.
 
@@ -753,8 +726,6 @@ def get_config():
         - :py:data:`address` JSON encoding of the return address.
 
     """
-    warnings_keys = config["warnings"].keys()
-    warnings_vals = map(int, config["warnings"].values())
-    warnings = dict(zip(warnings_keys, warnings_vals))
+    warnings = dict((key, int(value)) for (key, value) in config["warnings"].items())
     address = dict(config["address"])
     return {"warnings": warnings, "address": address}
