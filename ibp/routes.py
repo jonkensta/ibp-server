@@ -226,6 +226,14 @@ def get_request_address(session, request):
     }
 
 
+def parse_request_json(schema):
+    """Parse the bottle request JSON using a schema."""
+    try:
+        return schema.load(bottle.request.json)
+    except marshmallow.exceptions.ValidationError as exc:
+        raise bottle.HTTPError(400, exc.messages, exc)
+
+
 def ship_request(session, request):
     """Ship a request."""
     inmate = request.inmate
@@ -236,10 +244,7 @@ def ship_request(session, request):
     if unit is None:
         raise bottle.HTTPError(400, "Inmate is not assigned to a unit.")
 
-    try:
-        fields = schemas.shipment.load(bottle.request.json)
-    except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, exc.messages, exc)
+    fields = parse_request_json(schemas.shipment)
 
     shipment = models.Shipment(
         requests=[request], date_shipped=date.today(), unit=unit, **fields
@@ -347,10 +352,7 @@ def create_request(session, inmate):
     :returns: :py:mod:`bottle` JSON response containing the request information.
 
     """
-    try:
-        fields = schemas.request.load(bottle.request.json)
-    except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, exc.messages, exc)
+    fields = parse_request_json(schemas.request)
 
     index = misc.get_next_available_index(item.index for item in inmate.requests)
     request = models.Request(index=index, date_processed=date.today(), **fields)
@@ -410,10 +412,7 @@ def update_request(session, request):
     :returns: :py:mod:`bottle` JSON response containing the request information.
 
     """
-    try:
-        fields = schemas.request.load(bottle.request.json)
-    except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, exc.messages, exc)
+    fields = parse_request_json(schemas.request)
 
     request.update_from_kwargs(**fields)
     session.add(request)
@@ -563,10 +562,7 @@ def create_comment(session, inmate):
     :returns: :py:mod:`bottle` JSON response containing the comment information.
 
     """
-    try:
-        fields = schemas.comment.load(bottle.request.json)
-    except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, exc.messages, exc)
+    fields = parse_request_json(schemas.comment)
 
     index = misc.get_next_available_index(item.index for item in inmate.comments)
     comment = models.Comment(index=index, datetime=datetime.now(), **fields)
@@ -626,10 +622,7 @@ def update_comment(session, comment):
     :returns: :py:mod:`bottle` JSON response containing the comment information.
 
     """
-    try:
-        fields = schemas.comment.load(bottle.request.json)
-    except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, exc.messages, exc)
+    fields = parse_request_json(schemas.comment)
 
     comment.update_from_kwargs(**fields)
     session.add(comment)
@@ -686,10 +679,7 @@ def ship_to_unit(session, unit):
     :returns: :py:mod:`bottle` JSON response containing the bulk shipment information.
 
     """
-    try:
-        fields = schemas.shipment.load(bottle.request.json)
-    except marshmallow.exceptions.ValidationError as exc:
-        raise bottle.HTTPError(400, exc.messages, exc)
+    fields = parse_request_json(schemas.shipment)
 
     shipment = models.Shipment(
         requests=[], unit=unit, date_shipped=date.today(), **fields
