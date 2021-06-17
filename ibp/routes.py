@@ -193,7 +193,8 @@ def load_cls_from_url_params(cls):
 
 
 @app.get("/inmate/<jurisdiction>/<inmate_id:int>")
-def show_inmate(session, jurisdiction, inmate_id):
+@load_inmate_from_url_params
+def show_inmate(session, inmate):
     """:py:mod:`bottle` route to handle a GET request for an inmate's info.
 
     This :py:mod:`bottle` route uses the following parameters extracted from the
@@ -213,24 +214,10 @@ def show_inmate(session, jurisdiction, inmate_id):
         - :py:data:`errors` List of error strings encountered during lookup.
 
     """
-    query = session.query(models.Inmate).filter_by(
-        jurisdiction=jurisdiction, id=inmate_id
-    )
-
-    try:
-        inmate = query.one()
-    except sqlalchemy.orm.exc.NoResultFound:
-        inmates, _ = db.query_providers_by_id(session, inmate_id)
-
-        try:
-            inmate = inmates.filter_by(jurisdiction=jurisdiction).one()
-        except sqlalchemy.orm.exc.NoResultFound as exc:
-            raise bottle.HTTPError(404, "Page not found", exc)
-
     errors = []
     if inmate.db_entry_is_stale():
-        inmates, errors = db.query_providers_by_id(session, inmate_id)
-        inmate = inmates.filter_by(jurisdiction=jurisdiction).one()
+        inmates, errors = db.query_providers_by_id(session, inmate.id)
+        inmate = inmates.filter_by(jurisdiction=inmate.jurisdiction).one()
 
     return {"errors": errors, "inmate": schemas.inmate.dump(inmate)}
 
