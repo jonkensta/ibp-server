@@ -1,5 +1,4 @@
 ## ZeroPi Build Guide
-----------------------------------------------------------------------------------------
 
 **Platform** </br>
 The ZeroPi board designed by FriendlyELEC, uses an Allwinner SoC with ARM processor.
@@ -29,15 +28,21 @@ The ZeroPi board designed by FriendlyELEC, uses an Allwinner SoC with ARM proces
    - passes boot arguments and control to Linux bootstrap loader
 
 4. Linux bootstrap loader: runs from DDR memory
-   - loads Linux kernel via uImage (Linux zImage with a 64-byte U-Boot header)
-   - loads the appropriate DTB (Device Tree Binary)
-
+   - loads Linux kernel from uImage (Linux zImage with a 64-byte U-Boot header)
+   - loads appropriate DTB (Device Tree Binary)
 
 ----------------------------------------------------------------------------------------
 
-**SD Card** </br>
+**Required Software Components** </br>
+- SPL and U-Boot: compiled together via mainline U-Boot (requires toolchain setup)
+- Arch Linux RFS: download/extract ArchLinuxARM latest (contains /boot/uImage)
+- boot script: compiled and written to /boot/boot.scr
+
+----------------------------------------------------------------------------------------
+
+**SD Card Contents** </br>
 Partition 1:
-  - U-Boot bootloader with SPL
+  - U-Boot bootloader with SPL (foo.??)
 
 Partition 2:
   - Linux RFS (uImage)
@@ -45,9 +50,9 @@ Partition 2:
 
 ----------------------------------------------------------------------------------------
 
-**Toolchain** </br>
+**Toolchain Requirements** </br>
 
-
+//TODO
 
 
 ----------------------------------------------------------------------------------------
