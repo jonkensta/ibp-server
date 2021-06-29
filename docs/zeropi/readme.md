@@ -32,15 +32,32 @@ The ZeroPi board designed by FriendlyELEC, uses an Allwinner SoC with ARM proces
    - loads appropriate DTB (Device Tree Binary)
 
 ----------------------------------------------------------------------------------------
+**Required Components** </br>
 
-**Required Software Components** </br>
-- SPL and U-Boot: compiled together via mainline U-Boot (requires toolchain setup)
-- Arch Linux RFS: download/extract ArchLinuxARM latest (contains /boot/uImage)
-- boot script: compiled and written to /boot/boot.scr
+1. SPL and U-Boot: compile from mainline U-Boot repository
+2. Linux RFS: use ArchLinuxARM latest (contains /boot/uImage)
+3. boot script: compile boot.scr (from boot.cmd) and write to /boot
+
+----------------------------------------------------------------------------------------
+**SPL and U-Boot** </br>
+
+Requirements:
+//TODO
+
+
+Toolchain setup:
+//TODO
+
+
+Default Config:
+../u-boot/configs/nanopi_m1_defconfig
+
+
 
 ----------------------------------------------------------------------------------------
 
-**SD Card Contents** </br>
+**SD Card Setup** </br>
+
 Partition 1:
   - U-Boot bootloader with SPL (foo.??)
 
@@ -48,14 +65,11 @@ Partition 2:
   - Linux RFS (uImage)
   - boot script (boot.scr)
 
-----------------------------------------------------------------------------------------
-
-**Toolchain Requirements** </br>
-
-//TODO
-
 
 ----------------------------------------------------------------------------------------
+
+Note: this board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
+and U-boot.
 
 Notes:
 
