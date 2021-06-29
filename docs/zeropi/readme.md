@@ -34,9 +34,9 @@ The ZeroPi board designed by FriendlyELEC, uses an Allwinner SoC with ARM proces
 ----------------------------------------------------------------------------------------
 **Required Components** </br>
 
-1. SPL and U-Boot: compile from mainline U-Boot repository
-2. Linux RFS: use ArchLinuxARM latest (contains /boot/uImage)
-3. boot script: compile boot.scr (from boot.cmd) and write to /boot
+- SPL and U-Boot: compile from mainline U-Boot repository
+- Linux RFS: use ArchLinuxARM latest (contains uImage and dtbs)
+- boot script: compile boot.scr (from boot.cmd) and write to /boot
 
 ----------------------------------------------------------------------------------------
 **SPL and U-Boot** </br>
