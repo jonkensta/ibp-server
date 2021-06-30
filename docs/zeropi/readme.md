@@ -43,12 +43,12 @@ RBL → SPL → U-Boot → Linux
 
 **Boot Component Details** </br>
 
-_RBL_ </br>
+**RBL:** </br>
 The RBL is created by the vendor, placed in the ROM and executes automatically. It has
 a few simple but critical functions including the task to find and execute the SPL. We
 don't need to modify this component and it's also not possible to modify it.
 
-***SPL*** </br>
+**SPL:** </br>
 We use the U-Boot mainline repository to create the SPL as well as the full U-Boot
 bootloader. Some platforms separate these elements into the MLO (SPL) and full U-Boot
 but on our platform they are compiled together into a single image.
@@ -67,7 +67,7 @@ initialize these aspects and hand off control to the full U-Boot.
 
 RBL → [ start.S → CPU inits → SoC inits ] → full U-Boot
 
-3. U-Boot:
+**U-Boot:** </br>
 Board inits occur during the full U-Boot process.
 - Board: ```u-boot/board/sunxi```
 - Default Configuration: ```u-boot/configs/nanopi_m1_defconfig``` 
@@ -81,7 +81,7 @@ the ```ZeroPi```.
 NOTE: additional customization of the Default Configuration is possible during the
 compilation steps using the CLI-based ```menuconfig``` tool included with U-Boot.
  
-4. Linux:
+**Linux:** </br>
 
 This board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
 //TODO
