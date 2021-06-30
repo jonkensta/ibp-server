@@ -50,7 +50,8 @@ don't need to modify this component and it's also not possible to modify it.
 
 2. SPL:
 We use the U-Boot mainline repository to create the SPL as well as the full U-Boot
-bootloader. They are compiled together into a single image.
+bootloader. Some platforms separate these elements into the MLO (SPL) and full U-Boot
+but on our platform they are compiled together into a single image.
 
 U-Boot buckets common software architecture elements by CPU, SoC, and Board. For
 example, all boards using an Arm Cortex A7 CPU (such as our ZeroPi), will use the same
@@ -66,17 +67,18 @@ initialize these aspects and hand off control to the full U-Boot.
 
 RBL → [ start.S → CPU inits → SoC inits ] → full U-Boot
 
+3. U-Boot:
 Board inits occur during the full U-Boot process.
 - Board: ```u-boot/board/sunxi```
 - Default Configuration: ```u-boot/configs/nanopi_m1_defconfig``` 
 
-Note all ```sunxi``` boards use the same source for common initialization settings but
-the ZeroPi does not have a specific Default Configuration. This is not unusual;
-multiple boards from a particular vendor will often share the same components and thus
-the same configuration settings. We use the ```NanoPi M1``` defconfig as it is
-very similar to the ```ZeroPi```.
+All ```sunxi``` boards use the same source for common initialization settings but the
+ZeroPi does not have a specific Default Configuration. This is not unusual; multiple
+boards from a particular vendor will often share the same components and thus the same
+configuration settings. We use the ```NanoPi M1``` defconfig as it is very similar to
+the ```ZeroPi```.
 
-Additional customization of the Default Configuration is possible during the
+NOTE: additional customization of the Default Configuration is possible during the
 compilation steps using the CLI-based ```menuconfig``` tool included with U-Boot.
  
 4. Linux:
