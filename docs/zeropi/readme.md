@@ -10,13 +10,16 @@ The ZeroPi board designed by FriendlyELEC, uses an Allwinner SoC with ARM proces
 ----------------------------------------------------------------------------------------
 
 **Boot Process** </br>
-1. RBL (ROM bootloader): runs from ROM of the SoC when board is powered on
-   - sets up stack, watchdog timer, system clock using PLL
-   - searches memory devices for SPL/MLO
-   - copies SPL/MLO from external memory device (SD card) to internal SRAM (SoC)
-   - executes SPL/MLO
 
-2. SPL (Secondary Program Loader) or MLO (Memory Loader): runs from internal SRAM (SoC)
+RBL → SPL → U-Boot → Linux
+
+1. RBL (ROM bootloader): runs from ROM of the SoC when board is powered on
+   - sets up stack, watchdog timer, system clock (using PLL)
+   - searches memory devices for SPL
+   - copies SPL from external memory device (SD card) to internal SRAM (SoC)
+   - executes SPL
+
+2. SPL (Secondary Program Loader, or MLO/Memory Loader): runs from internal SRAM (SoC)
    - inits UART console for debug messages
    - reconfigures PLL, inits DDR memory, config boot peripherals
    - copies U-Boot image from external memory device (SD card) into DDR memory
@@ -32,11 +35,52 @@ The ZeroPi board designed by FriendlyELEC, uses an Allwinner SoC with ARM proces
    - loads appropriate DTB (Device Tree Binary)
 
 ----------------------------------------------------------------------------------------
-**Required Components** </br>
+**Boot Component Details** </br>
 
-- SPL and U-Boot: compile from mainline U-Boot repository
-- Linux RFS: use ArchLinuxARM latest (contains uImage and dtbs)
-- boot script: compile boot.scr (from boot.cmd) and write to /boot
+1. RBL:
+The RBL is created by the vendor, placed in the ROM and executes automatically. It has
+a few simple but critical functions including the task to find and execute the SPL. We
+don't need to modify this component and it's also not possible to modify it.
+
+2. SPL:
+We use the U-Boot mainline repository to create the SPL as well as the full U-Boot
+bootloader. They are compiled together into a single image.
+
+The U-Boot software architecture buckets elements by CPU, SoC, and Board. For example,
+all boards using an Arm Cortex A7 CPU (such as our ZeroPi), will use the same CPU
+initialization code for compiling those aspects of an SPL and U-Boot binary. Similarly,
+boards using an AllWinner H3 SoC will use the same SoC initialization source code.
+
+- CPU: ```u-boot/arch/arm/cpu/armv7/sunxi```
+- SoC: ```u-boot/board/sunxi```
+
+Recall from the Boot Process steps, the SPL functionality (by design) is not as complex
+as the full U-Boot bootloader. The SPL only needs to know about the CPU and some of the
+SoC peripherals so it can initialize these aspects and and off to the full U-Boot:
+
+[ RBL ] → start.S → CPU inits → SoC inits → [ full U-Boot ]
+
+Board-specific inits occur during the full U-Boot process. Note the ZeroPi does not
+have a specific Board configuration file. This is not unusual as multiple boards from
+a particular vendor often share the same components and configuration settings.
+ 
+We use the NanoPi M1 config as it is a very similar board to the ZeroPi:
+- Board: ```u-boot/configs/nanopi_m1_defconfig``` 
+
+If desired, U-Boot does include the CLI-based tool ```menuconfig``` that allows
+customization of the default configuration; steps outlined below.
+
+4. Linux:
+
+This board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
+
+----------------------------------------------------------------------------------------
+**High-level Requirements** </br>
+
+This platform uses an SD card containing three elements:
+- SPL and U-Boot: compiled together into a single binary
+- Linux root file system: obtained from ArchLinuxARM latest (contains uImage and dtbs)
+- a boot script for U-Boot: use boot.scr, compiled from boot.cmd
 
 ----------------------------------------------------------------------------------------
 **SPL and U-Boot** </br>
@@ -47,11 +91,6 @@ Requirements:
 
 Toolchain setup:
 //TODO
-
-
-Default Config:
-../u-boot/configs/nanopi_m1_defconfig
-
 
 
 ----------------------------------------------------------------------------------------
@@ -65,11 +104,11 @@ Partition 2:
   - Linux RFS (uImage)
   - boot script (boot.scr)
 
+//TODO
+
 
 ----------------------------------------------------------------------------------------
 
-Note: this board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
-and U-boot.
 
 Notes:
 
