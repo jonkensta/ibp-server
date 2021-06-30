@@ -43,7 +43,7 @@ RBL → SPL → U-Boot → Linux
 
 **Boot Component Details** </br>
 
-1. RBL:
+****RBL**** </br>
 The RBL is created by the vendor, placed in the ROM and executes automatically. It has
 a few simple but critical functions including the task to find and execute the SPL. We
 don't need to modify this component and it's also not possible to modify it.
