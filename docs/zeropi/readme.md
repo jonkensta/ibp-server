@@ -46,19 +46,19 @@ don't need to modify this component and it's also not possible to modify it.
 We use the U-Boot mainline repository to create the SPL as well as the full U-Boot
 bootloader. They are compiled together into a single image.
 
-The U-Boot software architecture buckets elements by CPU, SoC, and Board. For example,
+U-Boot buckets software architecture elements by CPU, SoC, and Board. For example,
 all boards using an Arm Cortex A7 CPU (such as our ZeroPi), will use the same CPU
-initialization code for compiling those aspects of an SPL and U-Boot binary. Similarly,
-boards using an AllWinner H3 SoC will use the same SoC initialization source code.
+initialization code for compilation. Similarly, all boards using an AllWinner H3 SoC
+will use the same SoC initialization source code.
 
 - CPU: ```u-boot/arch/arm/cpu/armv7/sunxi```
 - SoC: ```u-boot/board/sunxi```
 
-Recall from the Boot Process steps, the SPL functionality (by design) is not as complex
-as the full U-Boot bootloader. The SPL only needs to know about the CPU and some of the
-SoC peripherals so it can initialize these aspects and and off to the full U-Boot:
+The SPL functionality (by design) is not as complex as the full U-Boot bootloader.
+The SPL only needs to know about the CPU and some of the SoC peripherals so it can
+initialize these aspects and hand off to the full U-Boot.
 
-[ RBL ] → start.S → CPU inits → SoC inits → [ full U-Boot ]
+RBL → [ start.S → CPU inits → SoC inits ] → full U-Boot
 
 Board-specific inits occur during the full U-Boot process. Note the ZeroPi does not
 have a specific Board configuration file. This is not unusual as multiple boards from
