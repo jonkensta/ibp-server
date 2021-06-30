@@ -15,24 +15,29 @@ RBL → SPL → U-Boot → Linux
 
 1. RBL (ROM bootloader): runs from ROM of the SoC when board is powered on
    - sets up stack, watchdog timer, system clock (using PLL)
-   - searches memory devices for SPL
+   - searches memory devices for SPL image (in our case, first partition of SD card)
    - copies SPL from external memory device (SD card) to internal SRAM (SoC)
    - executes SPL
 
 2. SPL (Secondary Program Loader, or MLO/Memory Loader): runs from internal SRAM (SoC)
    - inits UART console for debug messages
-   - reconfigures PLL, inits DDR memory, config boot peripherals
+   - reconfigures PLL, inits DDR memory, configs boot peripherals (pin muxing)
+   - searches memory devices for U-Boot image (in our case, first partition of SD card)
    - copies U-Boot image from external memory device (SD card) into DDR memory
    - passes control to U-Boot
 
 3. U-Boot: runs from DDR memory
-   - inits relevant peripherals to support loading kernel
-   - loads Linux kernel image from boot sources (/boot/uImage) to DDR memory
-   - passes boot arguments and control to Linux bootstrap loader
+   - inits relevant peripherals to support loading the kernel
+   - runs script to set destinations (DDR memory addresses) for Linux kernel and DTBs
+   - loads Linux kernel image ```/boot/zImage``` and DTB/FDT ```/boot/dtbs``` from the
+     SD card to the preset destinations in DDR memory
+   - passes arguments (console settings, location of Linux RFS on SD card, and memory
+     addresses of Linux kernel and the DTB/FDT in DDR memory) and transfers control to
+     the Linux bootstrap loader 
 
 4. Linux bootstrap loader: runs from DDR memory
-   - loads Linux kernel from uImage (Linux zImage with a 64-byte U-Boot header)
-   - loads appropriate DTB (Device Tree Binary)
+   - uses the arguments and memory locations received from U-Boot to locate, decompress,
+     config, and init the Linux kernel.
 
 ----------------------------------------------------------------------------------------
 **Boot Component Details** </br>
