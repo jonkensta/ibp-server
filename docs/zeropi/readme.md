@@ -51,10 +51,10 @@ don't need to modify this component and it's also not possible to modify it.
 We use the U-Boot mainline repository to create the SPL as well as the full U-Boot
 bootloader. They are compiled together into a single image.
 
-U-Boot buckets software architecture elements by CPU, SoC, and Board. For example,
-all boards using an Arm Cortex A7 CPU (such as our ZeroPi), will use the same CPU
-initialization code for compilation. Similarly, all boards using an AllWinner H3 SoC
-will use the same SoC initialization source code.
+U-Boot buckets common software architecture elements by CPU, SoC, and Board. For
+example, all boards using an Arm Cortex A7 CPU (such as our ZeroPi), will use the same
+CPU initialization code for compilation. Similarly, all boards using an AllWinner H3
+SoC will use the same SoC initialization source code.
 
 - CPU: ```u-boot/arch/arm/cpu/armv7/sunxi```
 - SoC: ```u-boot/arch/arm/mach-sunxi```
@@ -81,6 +81,7 @@ compilation steps using the CLI-based ```menuconfig``` tool included with U-Boot
 4. Linux:
 
 This board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
+//TODO
 
 ----------------------------------------------------------------------------------------
 **High-level Requirements** </br>
