@@ -61,22 +61,22 @@ will use the same SoC initialization source code.
 
 The SPL functionality (by design) is not as complex as the full U-Boot bootloader. The
 SPL only needs to know about the CPU and some of the SoC peripherals so it can
-initialize these aspects and hand off to the full U-Boot.
+initialize these aspects and hand off control to the full U-Boot.
 
 RBL → [ start.S → CPU inits → SoC inits ] → full U-Boot
 
-Board-specific inits occur during the full U-Boot process.
+Board inits occur during the full U-Boot process.
 - Board: ```u-boot/board/sunxi```
 - Default Configuration: ```u-boot/configs/nanopi_m1_defconfig``` 
 
-Note all ```sunxi``` Boards use the same source for common initialization settings but
-the ZeroPi does not have a specific Default Configuration file. This is not unusual
-as multiple boards from a particular vendor often share the same components and the same
-configuration settings. We use the ```NanoPi M1``` Default Config as it is very similar
-to the ```ZeroPi```.
+Note all ```sunxi``` boards use the same source for common initialization settings but
+the ZeroPi does not have a specific Default Configuration. This is not unusual;
+multiple boards from a particular vendor will often share the same components and thus
+the same configuration settings. We use the ```NanoPi M1``` defconfig as it is
+very similar to the ```ZeroPi```.
 
 Additional customization of the Default Configuration is possible during the
-compilation steps using the CLI-tool ```menuconfig``` included with U-Boot.
+compilation steps using the CLI-based ```menuconfig``` tool included with U-Boot.
  
 4. Linux:
 
