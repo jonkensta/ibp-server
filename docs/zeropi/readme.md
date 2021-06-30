@@ -9,7 +9,7 @@ The ZeroPi board designed by FriendlyELEC, uses an Allwinner SoC with ARM proces
 
 ----------------------------------------------------------------------------------------
 
-**Boot Process** </br>
+### Boot Process </br>
 
 RBL → SPL → U-Boot → Linux
 
