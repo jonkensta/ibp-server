@@ -41,7 +41,7 @@ RBL → SPL → U-Boot → Linux
 
 ----------------------------------------------------------------------------------------
 
-**Boot Components: Source Code Details** </br>
+**Boot Component Details** </br>
 
 1. RBL:
 The RBL is created by the vendor, placed in the ROM and executes automatically. It has
