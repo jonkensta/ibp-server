@@ -52,24 +52,27 @@ initialization code for compilation. Similarly, all boards using an AllWinner H3
 will use the same SoC initialization source code.
 
 - CPU: ```u-boot/arch/arm/cpu/armv7/sunxi```
-- SoC: ```u-boot/board/sunxi```
+- SoC: ```u-boot/arch/arm/mach-sunxi```
 
-The SPL functionality (by design) is not as complex as the full U-Boot bootloader.
-The SPL only needs to know about the CPU and some of the SoC peripherals so it can
+The SPL functionality (by design) is not as complex as the full U-Boot bootloader. The
+SPL only needs to know about the CPU and some of the SoC peripherals so it can
 initialize these aspects and hand off to the full U-Boot.
 
 RBL → [ start.S → CPU inits → SoC inits ] → full U-Boot
 
-Board-specific inits occur during the full U-Boot process. Note the ZeroPi does not
-have a specific Board configuration file. This is not unusual as multiple boards from
-a particular vendor often share the same components and configuration settings.
+Board-specific inits occur during the full U-Boot process.
+- Board: ```u-boot/board/sunxi```
+- Default Configuration: ```u-boot/configs/nanopi_m1_defconfig``` 
+
+Note all ```sunxi``` Boards use the same source for common initialization settings but
+the ZeroPi does not have a specific Default Configuration file. This is not unusual
+as multiple boards from a particular vendor often share the same components and the same
+configuration settings. We use the ```NanoPi M1``` Default Config as it is very similar
+to the ```ZeroPi```.
+
+Additional customization of the Default Configuration is possible during the
+compilation steps using the CLI-tool ```menuconfig``` included with U-Boot.
  
-We use the NanoPi M1 config as it is a very similar board to the ZeroPi:
-- Board: ```u-boot/configs/nanopi_m1_defconfig``` 
-
-If desired, U-Boot does include the CLI-based tool ```menuconfig``` that allows
-customization of the default configuration; steps outlined below.
-
 4. Linux:
 
 This board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
