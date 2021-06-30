@@ -68,15 +68,14 @@ initialize these aspects and hand off control to the full U-Boot.
 RBL → [ start.S → CPU inits → SoC inits ] → full U-Boot
 
 **U-Boot:** </br>
-Board inits occur during the full U-Boot process.
+Board inits occur during the full U-Boot process. All ```sunxi``` boards use the same
+source for common initialization settings but the ZeroPi does not have a specific
+Default Configuration. This is not unusual; multiple boards from a particular vendor
+will often share the same components and thus the same configuration settings. We use
+the ```NanoPi M1``` defconfig as it is very similar to the ```ZeroPi```.
+
 - Board: ```u-boot/board/sunxi```
 - Default Configuration: ```u-boot/configs/nanopi_m1_defconfig``` 
-
-All ```sunxi``` boards use the same source for common initialization settings but the
-ZeroPi does not have a specific Default Configuration. This is not unusual; multiple
-boards from a particular vendor will often share the same components and thus the same
-configuration settings. We use the ```NanoPi M1``` defconfig as it is very similar to
-the ```ZeroPi```.
 
 NOTE: additional customization of the Default Configuration is possible during the
 compilation steps using the CLI-based ```menuconfig``` tool included with U-Boot.
