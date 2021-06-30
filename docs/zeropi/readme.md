@@ -40,7 +40,8 @@ RBL → SPL → U-Boot → Linux
      config, and init the Linux kernel.
 
 ----------------------------------------------------------------------------------------
-**Boot Component Details** </br>
+
+**Boot Components: Source Code Details** </br>
 
 1. RBL:
 The RBL is created by the vendor, placed in the ROM and executes automatically. It has
@@ -84,6 +85,7 @@ This board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
 //TODO
 
 ----------------------------------------------------------------------------------------
+
 **High-level Requirements** </br>
 
 This platform uses an SD card containing three elements:
@@ -92,6 +94,7 @@ This platform uses an SD card containing three elements:
 - a boot script for U-Boot: use boot.scr, compiled from boot.cmd
 
 ----------------------------------------------------------------------------------------
+
 **SPL and U-Boot** </br>
 
 Requirements:
@@ -117,7 +120,6 @@ Partition 2:
 
 
 ----------------------------------------------------------------------------------------
-
 
 Notes:
 
