@@ -1,6 +1,6 @@
 ## ZeroPi Build Guide
 
-**Platform** </br>
+### Platform </br>
 The ZeroPi board designed by FriendlyELEC, uses an Allwinner SoC with ARM processor.
 
 - Board: [ZeroPi](https://wiki.friendlyarm.com/wiki/index.php/ZeroPi) by FriendlyELEC
@@ -41,7 +41,7 @@ RBL → SPL → U-Boot → Linux
 
 ----------------------------------------------------------------------------------------
 
-**Boot Component Details** </br>
+### Boot Component Details </br>
 
 **RBL:** </br>
 The RBL is created by the vendor, placed in the ROM and executes automatically. It has
@@ -88,7 +88,7 @@ This board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
 
 ----------------------------------------------------------------------------------------
 
-**High-level Requirements** </br>
+### High-level Requirements </br>
 
 This platform uses an SD card containing three elements:
 - SPL and U-Boot: compiled together into a single binary
@@ -97,7 +97,7 @@ This platform uses an SD card containing three elements:
 
 ----------------------------------------------------------------------------------------
 
-**SPL and U-Boot** </br>
+### SPL and U-Boot </br>
 
 Requirements:
 //TODO
@@ -109,7 +109,7 @@ Toolchain setup:
 
 ----------------------------------------------------------------------------------------
 
-**SD Card Setup** </br>
+### SD Card Setup </br>
 
 Partition 1:
   - U-Boot bootloader with SPL (foo.??)
