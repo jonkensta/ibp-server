@@ -18,6 +18,14 @@ Our platform uses an SD card containing three elements:
 
 ----------------------------------------------------------------------------------------
 
+### Quick Start </br>
+
+//TODO: commands only, no context
+
+
+
+----------------------------------------------------------------------------------------
+
 ### SD Card: Partition </br>
 
 SD Card: SanDisk 16GB micro (Class 10)
@@ -26,8 +34,7 @@ Note this process completely rewrites the SD card; all existing data will be los
 
 ```zsh
 
-# Confirm the SD card name, 'sdX'. For example, 'sdc' below.
-# Disregard existing partitions, if any ('sdc1').
+# confirm SD card name 'sdX', for example, 'sdc' below
 
 % lsblk
 NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
@@ -39,14 +46,13 @@ nvme0n1     259:0    0 465.8G  0 disk
 ├─nvme0n1p2 259:2    0     8G  0 part [SWAP]
 └─nvme0n1p3 259:3    0 457.3G  0 part /
 
-# Write zeros to the beginning of the card, replacing 'sdX' with your SD card name.
+# write zeros to the beginning of the card (replace 'sdX' with your SD card name)
 
 % sudo dd if=/dev/zero of=/dev/sdX bs=1M count=8
 [sudo] password for root: 
 8+0 records in
 8+0 records out
 8388608 bytes (8.4 MB, 8.0 MiB) copied, 3.1184 s, 2.7 MB/s
-
 
 # use fdisk to partition the rest of the card
 % sudo fdisk /dev/sdX
@@ -122,7 +128,20 @@ Writing superblocks and filesystem accounting information: done
 
 ```zsh
 
+# install toolchain
+
+# per aur, install gcc in stages to avoid circular dependencies with glibc versions
+% yay -S arm-linux-gnueabihf-gcc-stage1
+
+# conflict note: 'y' to remove gcc-stage1 and replace with gcc-stage2
+% yay -S arm-linux-gnueabihf-gcc-stage2
+
+# conflict note: 'y' to remove glibc-headers and replace with glibc
+# conflict note: 'y' to remove gcc-stage2 and replace with gcc
+% yay -S arm-linux-gnueabihf-gcc
+
 # clone U-Boot mainline repo
+
 % git clone https://source.denx.de/u-boot/u-boot.git
 Cloning into 'u-boot'...
 remote: Enumerating objects: 783410, done.
@@ -132,12 +151,42 @@ remote: Total 783410 (delta 7759), reused 8355 (delta 6230), pack-reused 772391
 Receiving objects: 100% (783410/783410), 157.51 MiB | 8.07 MiB/s, done.
 Resolving deltas: 100% (651893/651893), done.
 
-# install toolchain
-% yay -S arm-linux-gnueabihf-gcc-stage1
-% yay -S arm-linux-gnueabihf-gcc-stage2
-% yay -S arm-linux-gnueabihf-gcc
 
 # compilation steps
+
+# cd to u-boot directory, remove any previously compiled files if needed
+% make CROSS_COMPILE=arm-linux-gnueabihf- distclean
+
+# apply board default configuration
+% make CROSS_COMPILE=arm-linux-gnueabihf- nanopi_m1_defconfig
+  HOSTCC  scripts/basic/fixdep
+  HOSTCC  scripts/kconfig/conf.o
+  YACC    scripts/kconfig/zconf.tab.c
+  LEX     scripts/kconfig/zconf.lex.c
+  HOSTCC  scripts/kconfig/zconf.tab.o
+  HOSTLD  scripts/kconfig/conf
+
+  configuration written to .config
+
+# optional: run menuconfig to customize settings other than default config
+% make CROSS_COMPILE=arm-linux-gnueabihf- menuconfig
+
+# install the 'swig' package (required for compilation step)
+sudo pacman -S swig
+
+# compile
+% make CROSS_COMPILE=arm-linux-gnueabihf- -j$(nproc)
+
+# confirm 'u-boot-sunxi-with-spl.bin' was created:
+% ls
+api        disk      Kbuild       README      u-boot.cfg          u-boot.map
+arch       doc       Kconfig      scripts     u-boot.cfg.configs  u-boot-nodtb.bin
+board      drivers   lib          spl         u-boot.dtb          u-boot.srec
+build      dts       Licenses     System.map  u-boot-dtb.bin      u-boot-sunxi-with-spl.bin
+cmd        env       MAINTAINERS  test        u-boot-dtb.img      u-boot-sunxi-with-spl.map
+common     examples  Makefile     tools       u-boot.dtb.out      u-boot.sym
+config.mk  fs        net          u-boot      u-boot.img
+configs    include   post         u-boot.bin  u-boot.lds
 
 ```
 
