@@ -9,6 +9,59 @@ The ZeroPi board designed by FriendlyELEC, uses an Allwinner SoC with ARM proces
 
 ----------------------------------------------------------------------------------------
 
+### Summary </br>
+
+Our platform uses an SD card containing three elements:
+1. SPL and U-Boot: compiled together into a single binary
+2. Linux root file system: obtained from ArchLinuxARM latest (contains uImage and dtbs)
+3. a boot script for U-Boot: use boot.scr, compiled from boot.cmd
+
+----------------------------------------------------------------------------------------
+
+### SD Card: Partition </br>
+
+// card description
+
+// partition steps
+
+----------------------------------------------------------------------------------------
+
+### SPL and U-Boot </br>
+
+// toolchain setup
+
+// get source (u-boot repo)
+
+// compilation steps
+
+----------------------------------------------------------------------------------------
+
+### Linux root file system </br>
+
+// get source (archlinuxarm link)
+
+----------------------------------------------------------------------------------------
+
+### boot script </br>
+
+// toolchain setup
+
+// get source (aw link)
+
+// compilation steps
+
+----------------------------------------------------------------------------------------
+
+### SD Card: Write </br>
+
+// write spl and u-boot
+
+// write linux rfs
+
+// write boot script 
+
+----------------------------------------------------------------------------------------
+
 ### Boot Process </br>
 
 RBL → SPL → U-Boot → Linux
@@ -37,7 +90,7 @@ RBL → SPL → U-Boot → Linux
 
 4. Linux bootstrap loader: runs from DDR memory
    - uses the arguments and memory locations received from U-Boot to locate, decompress,
-     config, and init the Linux kernel.
+     nconfig, and init the Linux kernel.
 
 ----------------------------------------------------------------------------------------
 
@@ -87,40 +140,6 @@ This board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
 
 ----------------------------------------------------------------------------------------
 
-### High-level Requirements </br>
-
-This platform uses an SD card containing three elements:
-- SPL and U-Boot: compiled together into a single binary
-- Linux root file system: obtained from ArchLinuxARM latest (contains uImage and dtbs)
-- a boot script for U-Boot: use boot.scr, compiled from boot.cmd
-
-----------------------------------------------------------------------------------------
-
-### SPL and U-Boot </br>
-
-Requirements:
-//TODO
-
-
-Toolchain setup:
-//TODO
-
-
-----------------------------------------------------------------------------------------
-
-### SD Card Setup </br>
-
-Partition 1:
-  - U-Boot bootloader with SPL (foo.??)
-
-Partition 2:
-  - Linux RFS (uImage)
-  - boot script (boot.scr)
-
-//TODO
-
-
-----------------------------------------------------------------------------------------
 
 Notes:
 
