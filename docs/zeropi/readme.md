@@ -120,12 +120,26 @@ Writing superblocks and filesystem accounting information: done
 
 ### SPL and U-Boot </br>
 
-// toolchain setup
+```zsh
 
-// get source (u-boot repo)
+# clone U-Boot mainline repo
+% git clone https://source.denx.de/u-boot/u-boot.git
+Cloning into 'u-boot'...
+remote: Enumerating objects: 783410, done.
+remote: Counting objects: 100% (11019/11019), done.
+remote: Compressing objects: 100% (4724/4724), done.
+remote: Total 783410 (delta 7759), reused 8355 (delta 6230), pack-reused 772391
+Receiving objects: 100% (783410/783410), 157.51 MiB | 8.07 MiB/s, done.
+Resolving deltas: 100% (651893/651893), done.
 
-// compilation steps
+# install toolchain
+% yay -S arm-linux-gnueabihf-gcc-stage1
+% yay -S arm-linux-gnueabihf-gcc-stage2
+% yay -S arm-linux-gnueabihf-gcc
 
+# compilation steps
+
+```
 
 ----------------------------------------------------------------------------------------
 
@@ -141,13 +155,13 @@ Writing superblocks and filesystem accounting information: done
 
 ### SD Card: Write </br>
 
-# mount the file system
+// mount the file system
 
-# download and extract linux root file system
+// download and extract linux root file system
 
-# write spl and u-boot
+// write spl and u-boot
 
-# write boot script 
+// write boot script 
 
 ----------------------------------------------------------------------------------------
 
