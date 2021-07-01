@@ -20,9 +20,29 @@ Our platform uses an SD card containing three elements:
 
 ### SD Card: Partition </br>
 
-// card description
+SD Card: SanDisk 16GB micro (Class 10)
 
-// partition steps
+```zsh
+
+# confirm card name, sdX
+
+% lsblk
+NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+sda           8:0    1     0B  0 disk 
+sdb           8:16   1     0B  0 disk 
+sdc           8:32   1  14.8G  0 disk 
+└─sdc1        8:33   1  14.8G  0 part 
+
+# write zeros to the beginning of the card
+
+% sudo dd if=/dev/zero of=/dev/sdX bs=1M count=8
+[sudo] password for root: 
+8+0 records in
+8+0 records out
+8388608 bytes (8.4 MB, 8.0 MiB) copied, 3.1184 s, 2.7 MB/s
+
+```
+
 
 ----------------------------------------------------------------------------------------
 
