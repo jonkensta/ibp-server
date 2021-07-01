@@ -151,7 +151,6 @@ remote: Total 783410 (delta 7759), reused 8355 (delta 6230), pack-reused 772391
 Receiving objects: 100% (783410/783410), 157.51 MiB | 8.07 MiB/s, done.
 Resolving deltas: 100% (651893/651893), done.
 
-
 # compilation steps
 
 # cd to u-boot directory, remove any previously compiled files if needed
