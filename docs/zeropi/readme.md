@@ -22,18 +22,24 @@ Our platform uses an SD card containing three elements:
 
 SD Card: SanDisk 16GB micro (Class 10)
 
+Note this process completely rewrites the SD card; all existing data will be lost.
+
 ```zsh
 
-# confirm card name, sdX
+# Confirm the SD card name, 'sdX'. For example, 'sdc' below.
+# Disregard existing partitions, if any ('sdc1').
 
 % lsblk
 NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
 sda           8:0    1     0B  0 disk 
 sdb           8:16   1     0B  0 disk 
 sdc           8:32   1  14.8G  0 disk 
-└─sdc1        8:33   1  14.8G  0 part 
+nvme0n1     259:0    0 465.8G  0 disk 
+├─nvme0n1p1 259:1    0   512M  0 part /boot
+├─nvme0n1p2 259:2    0     8G  0 part [SWAP]
+└─nvme0n1p3 259:3    0 457.3G  0 part /
 
-# write zeros to the beginning of the card
+# Write zeros to the beginning of the card, replacing 'sdX' with your SD card name.
 
 % sudo dd if=/dev/zero of=/dev/sdX bs=1M count=8
 [sudo] password for root: 
@@ -41,9 +47,75 @@ sdc           8:32   1  14.8G  0 disk
 8+0 records out
 8388608 bytes (8.4 MB, 8.0 MiB) copied, 3.1184 s, 2.7 MB/s
 
+
+# use fdisk to partition the rest of the card
+% sudo fdisk /dev/sdX
+[sudo] password for root: 
+
+Welcome to fdisk (util-linux 2.37).
+Changes will remain in memory only, until you decide to write them.
+Be careful before using the write command.
+
+Command (m for help): 
+
+# create a new empty DOS partition table
+Command (m for help): o
+Created a new DOS disklabel with disk identifier 0xe1cbda54.
+
+# verify all previous partitions were removed
+Command (m for help): p
+Disk /dev/sdc: 14.84 GiB, 15931539456 bytes, 31116288 sectors
+Disk model: CardReader SD2  
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disklabel type: dos
+Disk identifier: 0xe1cbda54
+
+# create a new primary partition, save changes and exit
+Command (m for help): n
+Partition type
+   p   primary (0 primary, 0 extended, 4 free)
+   e   extended (container for logical partitions)
+Select (default p): p
+Partition number (1-4, default 1): 1
+First sector (2048-31116287, default 2048): 2048
+Last sector, +/-sectors or +/-size{K,M,G,T,P} (2048-31116287, default 31116287): 
+
+Created a new partition 1 of type 'Linux' and of size 14.8 GiB.
+
+Command (m for help): w
+The partition table has been altered.
+Calling ioctl() to re-read partition table.
+Syncing disks.
+
+# verify the new partition 'sdX1', for example 'sdc1' below:
+% lsblk
+NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+sda           8:0    1     0B  0 disk 
+sdb           8:16   1     0B  0 disk 
+sdc           8:32   1  14.8G  0 disk 
+└─sdc1        8:33   1  14.8G  0 part 
+nvme0n1     259:0    0 465.8G  0 disk 
+├─nvme0n1p1 259:1    0   512M  0 part /boot
+├─nvme0n1p2 259:2    0     8G  0 part [SWAP]
+└─nvme0n1p3 259:3    0 457.3G  0 part /
+
+# create the ext4 filesystem, this will take a minute or so
+% sudo mkfs.ext4 /dev/sdX1
+[sudo] password for root: 
+mke2fs 1.46.2 (28-Feb-2021)
+Creating filesystem with 3889280 4k blocks and 972944 inodes
+Filesystem UUID: 113314f0-b772-40ec-869e-8f5ddd9305ab
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632, 2654208
+
+Allocating group tables: done                            
+Writing inode tables: done                            
+Creating journal (16384 blocks): done
+Writing superblocks and filesystem accounting information: done  
+
 ```
-
-
 ----------------------------------------------------------------------------------------
 
 ### SPL and U-Boot </br>
@@ -54,11 +126,6 @@ sdc           8:32   1  14.8G  0 disk
 
 // compilation steps
 
-----------------------------------------------------------------------------------------
-
-### Linux root file system </br>
-
-// get source (archlinuxarm link)
 
 ----------------------------------------------------------------------------------------
 
@@ -74,11 +141,13 @@ sdc           8:32   1  14.8G  0 disk
 
 ### SD Card: Write </br>
 
-// write spl and u-boot
+# mount the file system
 
-// write linux rfs
+# download and extract linux root file system
 
-// write boot script 
+# write spl and u-boot
+
+# write boot script 
 
 ----------------------------------------------------------------------------------------
 
