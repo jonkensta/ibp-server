@@ -402,8 +402,9 @@ This board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
 
 // recommended usb to serial cable type
 
-// pins
-look at messages: dmesg -T --follow
+// pins, reboot
+
+// look for usb device with dmesg -T --follow
 
 // picocom package and settings
 
