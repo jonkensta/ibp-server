@@ -20,11 +20,50 @@ Our platform uses an SD card containing three elements:
 
 ### Quick Start </br>
 
-//TODO: commands only, no context
+```zsh
 
+# compile SPL and U-Boot
+yay -S arm-linux-gnueabihf-gcc-stage1
+yay -S arm-linux-gnueabihf-gcc-stage2
+yay -S arm-linux-gnueabihf-gcc
+pacman -S swig
+git clone https://source.denx.de/u-boot/u-boot.git
+cd u-boot
+make CROSS_COMPILE=arm-linux-gnueabihf- nanopi_m1_defconfig
+make CROSS_COMPILE=arm-linux-gnueabihf- -j$(nproc)
 
+# compile boot.scr (requires boot.cmd)
+pacman -S uboot-tools
+mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "ZeroPi Boot Script" -d boot.cmd boot.scr
+
+# prep SD card
+dd if=/dev/zero of=/dev/sdX bs=1M count=8
+fdisk /dev/sdX
+o, <enter> # create new label
+n, <enter>, <enter>, <enter>, <enter>, <enter> # new partition, accept all defaults
+w, <enter> # write all changes and exit
+
+# create filesystem and mount
+mkfs.ext4 /dev/sdX1
+mount /dev/sdX1 /mnt/<foo>
+
+# download and extract Linux root file system
+wget http://os.archlinuxarm.org/os/ArchLinuxARM-armv7-latest.tar.gz
+bsdtar -xpf ArchLinuxARM-armv7-latest.tar.gz -C /mnt/<foo>
+sync
+
+# install bootloader and boot script
+dd if=u-boot-sunxi-with-spl.bin of=/dev/sdX bs=1024 seek=8 
+cp boot.scr /mnt/zeropi/mnt/boot/.
+umount /mnt/zeropi/mnt
+
+# done
+
+```
 
 ----------------------------------------------------------------------------------------
+
+## Detailed Walk-through </br>
 
 ### SPL and U-Boot </br>
 
@@ -43,7 +82,6 @@ Our platform uses an SD card containing three elements:
 % yay -S arm-linux-gnueabihf-gcc
 
 # clone U-Boot mainline repo
-
 % git clone https://source.denx.de/u-boot/u-boot.git
 Cloning into 'u-boot'...
 remote: Enumerating objects: 783410, done.
@@ -270,7 +308,7 @@ nvme0n1     259:0    0 465.8G  0 disk
 # unmount the SD card mount point /mnt/<foo>
 % sudo umount /mnt/zeropi/mnt
 
-# next, behold the stupendous glory of U-Boot and Linux on the ZeroPi
+# now, behold the stupendous glory of U-Boot and Arch Linux on the ZeroPi
 
 ```
 
