@@ -222,7 +222,7 @@ fi
 
 ```
 
-Compile ```boot.scr``` from ```boot.cmd`` using ```mkimage``` in the ```uboot-tools``` package.
+Compile ```boot.scr``` from ```boot.cmd``` using ```mkimage``` in the ```uboot-tools``` package.
 
 ```zsh
 # install uboot-tools
