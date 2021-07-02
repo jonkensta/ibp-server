@@ -318,7 +318,7 @@ nvme0n1     259:0    0 465.8G  0 disk
 
 ### Boot Process Details </br>
 
-There are 4 steps to the boot process:
+There are 4 steps to the boot process:</br>
 
    RBL → SPL → U-Boot → Linux
 
