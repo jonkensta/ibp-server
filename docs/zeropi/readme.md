@@ -22,7 +22,7 @@ Our platform uses an SD card containing three elements:
 
 ```zsh
 
-# setup u-boot toolchain
+# setup U-Boot toolchain
 yay -S arm-linux-gnueabihf-gcc-stage1
 yay -S arm-linux-gnueabihf-gcc-stage2
 yay -S arm-linux-gnueabihf-gcc
@@ -43,7 +43,7 @@ dd if=/dev/zero of=/dev/sdX bs=1M count=8
 fdisk /dev/sdX
 o, <enter> # create new label
 n, <enter>, <enter>, <enter>, <enter>, <enter> # new partition, accept all defaults
-w, <enter> # write all changes and exit
+w, <enter> # write changes and exit
 
 # create filesystem and mount
 mkfs.ext4 /dev/sdX1
@@ -56,8 +56,8 @@ sync
 
 # install bootloader and boot script
 dd if=u-boot-sunxi-with-spl.bin of=/dev/sdX bs=1024 seek=8 
-cp boot.scr /mnt/zeropi/mnt/boot/.
-umount /mnt/zeropi/mnt
+cp boot.scr /mnt/<foo>
+umount /mnt/<foo>
 
 # done
 
