@@ -14,7 +14,7 @@ The ZeroPi board designed by FriendlyELEC, uses an Allwinner SoC with ARM proces
 Our platform uses an SD card containing three elements:
 1. SPL and U-Boot: compiled together into a single binary
 2. Linux root file system: obtained from ArchLinuxARM latest (contains uImage and dtbs)
-3. a boot script for U-Boot: use boot.scr, compiled from boot.cmd
+3. The U-Boot script ```boot.scr```, compiled from boot.cmd
 
 ----------------------------------------------------------------------------------------
 
@@ -193,11 +193,45 @@ configs    include   post         u-boot.bin  u-boot.lds
 
 ### boot script </br>
 
-// toolchain setup
+U-Boot automatically looks for and loads ```boot.scr``` and ```uEnv.txt```.
+Our platform only uses ```boot.scr```.
 
-// get source (aw link)
+Create a file ```boot.cmd``` containing the source below (from the [Arch Wiki](https://wiki.archlinux.org/title/NanoPi_M1)):
 
-// compilation steps
+```zsh
+
+part uuid ${devtype} ${devnum}:${bootpart} uuid
+setenv bootargs console=${console} root=PARTUUID=${uuid} rw rootwait
+
+if load ${devtype} ${devnum}:${bootpart} ${kernel_addr_r} /boot/zImage; then
+  if load ${devtype} ${devnum}:${bootpart} ${fdt_addr_r} /boot/dtbs/${fdtfile}; then
+    if load ${devtype} ${devnum}:${bootpart} ${ramdisk_addr_r} /boot/initramfs-linux.img; then
+      bootz ${kernel_addr_r} ${ramdisk_addr_r}:${filesize} ${fdt_addr_r};
+    else
+      bootz ${kernel_addr_r} - ${fdt_addr_r};
+    fi;
+  fi;
+fi
+
+if load ${devtype} ${devnum}:${bootpart} 0x48000000 /boot/uImage; then
+  if load ${devtype} ${devnum}:${bootpart} 0x43000000 /boot/script.bin; then
+    setenv bootm_boot_mode sec;
+    bootm 0x48000000;
+  fi;
+fi
+
+```
+
+Compile ```boot.scr``` from ```boot.cmd`` using ```mkimage``` in the ```uboot-tools``` package.
+
+```zsh
+# install uboot-tools
+% sudo pacman -S uboot-tools
+
+# compile boot.scr
+% # mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "ZeroPi Boot Script" -d boot.cmd boot.scr
+
+```
 
 ----------------------------------------------------------------------------------------
 
