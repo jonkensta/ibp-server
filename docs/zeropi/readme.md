@@ -316,9 +316,11 @@ nvme0n1     259:0    0 465.8G  0 disk
 
 ----------------------------------------------------------------------------------------
 
-### Boot Process </br>
+### Boot Process Details </br>
 
-RBL → SPL → U-Boot → Linux
+There are 4 steps to the boot process: </br>
+
+    RBL → SPL → U-Boot → Linux
 
 1. RBL (ROM bootloader): runs from ROM of the SoC when board is powered on
    - sets up stack, watchdog timer, system clock (using PLL)
