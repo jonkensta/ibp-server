@@ -26,9 +26,124 @@ Our platform uses an SD card containing three elements:
 
 ----------------------------------------------------------------------------------------
 
-### SD Card: Partition </br>
+### SPL and U-Boot </br>
 
-SD Card: SanDisk 16GB micro (Class 10)
+```zsh
+
+# install toolchain
+
+# per aur, install gcc in stages to avoid circular dependencies with glibc versions
+% yay -S arm-linux-gnueabihf-gcc-stage1
+
+# conflict note: 'y' to remove gcc-stage1 and replace with gcc-stage2
+% yay -S arm-linux-gnueabihf-gcc-stage2
+
+# conflict note: 'y' to remove glibc-headers and replace with glibc
+# conflict note: 'y' to remove gcc-stage2 and replace with gcc
+% yay -S arm-linux-gnueabihf-gcc
+
+# clone U-Boot mainline repo
+
+% git clone https://source.denx.de/u-boot/u-boot.git
+Cloning into 'u-boot'...
+remote: Enumerating objects: 783410, done.
+remote: Counting objects: 100% (11019/11019), done.
+remote: Compressing objects: 100% (4724/4724), done.
+remote: Total 783410 (delta 7759), reused 8355 (delta 6230), pack-reused 772391
+Receiving objects: 100% (783410/783410), 157.51 MiB | 8.07 MiB/s, done.
+Resolving deltas: 100% (651893/651893), done.
+
+# compilation steps
+
+# cd to u-boot directory, remove any previously compiled files if needed
+% make CROSS_COMPILE=arm-linux-gnueabihf- distclean
+
+# apply board default configuration
+% make CROSS_COMPILE=arm-linux-gnueabihf- nanopi_m1_defconfig
+  HOSTCC  scripts/basic/fixdep
+  HOSTCC  scripts/kconfig/conf.o
+  YACC    scripts/kconfig/zconf.tab.c
+  LEX     scripts/kconfig/zconf.lex.c
+  HOSTCC  scripts/kconfig/zconf.tab.o
+  HOSTLD  scripts/kconfig/conf
+
+  configuration written to .config
+
+# optional: run menuconfig to customize settings other than default config
+% make CROSS_COMPILE=arm-linux-gnueabihf- menuconfig
+
+# install the 'swig' package (required for compilation step)
+sudo pacman -S swig
+
+# compile
+% make CROSS_COMPILE=arm-linux-gnueabihf- -j$(nproc)
+
+# confirm the bootloader file 'u-boot-sunxi-with-spl.bin' was created:
+% ls
+api        disk      Kbuild       README      u-boot.cfg          u-boot.map
+arch       doc       Kconfig      scripts     u-boot.cfg.configs  u-boot-nodtb.bin
+board      drivers   lib          spl         u-boot.dtb          u-boot.srec
+build      dts       Licenses     System.map  u-boot-dtb.bin      u-boot-sunxi-with-spl.bin
+cmd        env       MAINTAINERS  test        u-boot-dtb.img      u-boot-sunxi-with-spl.map
+common     examples  Makefile     tools       u-boot.dtb.out      u-boot.sym
+config.mk  fs        net          u-boot      u-boot.img
+configs    include   post         u-boot.bin  u-boot.lds
+
+# note the bootloader location as we will write it to the SD card in a later step
+
+```
+
+----------------------------------------------------------------------------------------
+
+### boot script </br>
+
+U-Boot automatically looks for and loads ```boot.scr``` and ```uEnv.txt```.
+Our platform only uses ```boot.scr```.
+
+Create a file ```boot.cmd``` containing the source below (from the [Arch Wiki](https://wiki.archlinux.org/title/NanoPi_M1)):
+
+```zsh
+
+part uuid ${devtype} ${devnum}:${bootpart} uuid
+setenv bootargs console=${console} root=PARTUUID=${uuid} rw rootwait
+
+if load ${devtype} ${devnum}:${bootpart} ${kernel_addr_r} /boot/zImage; then
+  if load ${devtype} ${devnum}:${bootpart} ${fdt_addr_r} /boot/dtbs/${fdtfile}; then
+    if load ${devtype} ${devnum}:${bootpart} ${ramdisk_addr_r} /boot/initramfs-linux.img; then
+      bootz ${kernel_addr_r} ${ramdisk_addr_r}:${filesize} ${fdt_addr_r};
+    else
+      bootz ${kernel_addr_r} - ${fdt_addr_r};
+    fi;
+  fi;
+fi
+
+if load ${devtype} ${devnum}:${bootpart} 0x48000000 /boot/uImage; then
+  if load ${devtype} ${devnum}:${bootpart} 0x43000000 /boot/script.bin; then
+    setenv bootm_boot_mode sec;
+    bootm 0x48000000;
+  fi;
+fi
+
+```
+
+Compile ```boot.scr``` from ```boot.cmd``` using ```mkimage``` in the ```uboot-tools``` package.
+
+```zsh
+# install uboot-tools
+% sudo pacman -S uboot-tools
+
+# compile our boot script 'boot.scr'
+% mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "ZeroPi Boot Script" -d boot.cmd boot.scr
+
+# note the boot script location as we will write it to the SD card in a later step
+
+```
+
+----------------------------------------------------------------------------------------
+
+### SD Card </br>
+
+We use a SanDisk 16GB micro (Class 10) SD card.
 
 Note this process completely rewrites the SD card; all existing data will be lost.
 
@@ -121,129 +236,43 @@ Writing inode tables: done
 Creating journal (16384 blocks): done
 Writing superblocks and filesystem accounting information: done  
 
-```
-----------------------------------------------------------------------------------------
+# mount the file system to /mnt/<foo>
+% sudo mount -p /dev/sdX1 /mnt/zeropi/mnt
 
-### SPL and U-Boot </br>
+# verify
+% lsblk
+NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+sda           8:0    1     0B  0 disk 
+sdb           8:16   1     0B  0 disk 
+sdc           8:32   1  14.8G  0 disk 
+└─sdc1        8:33   1  14.8G  0 part /mnt/zeropi/mnt
+nvme0n1     259:0    0 465.8G  0 disk 
+├─nvme0n1p1 259:1    0   512M  0 part /boot
+├─nvme0n1p2 259:2    0     8G  0 part [SWAP]
+└─nvme0n1p3 259:3    0 457.3G  0 part /
 
-```zsh
+# download and extract the root file system
+% wget http://os.archlinuxarm.org/os/ArchLinuxARM-armv7-latest.tar.gz
 
-# install toolchain
+# uncompress and write to the mount point /mnt/<foo>
+# NOTE the '-C' flag to specify destination directory
+% sudo bsdtar -xpf ArchLinuxARM-armv7-latest.tar.gz -C /mnt/zeropi/mnt 
 
-# per aur, install gcc in stages to avoid circular dependencies with glibc versions
-% yay -S arm-linux-gnueabihf-gcc-stage1
+# write the changes (this may take a couple of minutes)
+% sync
 
-# conflict note: 'y' to remove gcc-stage1 and replace with gcc-stage2
-% yay -S arm-linux-gnueabihf-gcc-stage2
+# install the U-Boot bootloader
+% sudo dd if=u-boot-sunxi-with-spl.bin of=/dev/sdX bs=1024 seek=8 
 
-# conflict note: 'y' to remove glibc-headers and replace with glibc
-# conflict note: 'y' to remove gcc-stage2 and replace with gcc
-% yay -S arm-linux-gnueabihf-gcc
+# copy the boot script to the mount point /mnt/<foo>/boot 
+% sudo cp boot.scr /mnt/zeropi/mnt/boot/.
 
-# clone U-Boot mainline repo
+# unmount the SD card mount point /mnt/<foo>
+% sudo umount /mnt/zeropi/mnt
 
-% git clone https://source.denx.de/u-boot/u-boot.git
-Cloning into 'u-boot'...
-remote: Enumerating objects: 783410, done.
-remote: Counting objects: 100% (11019/11019), done.
-remote: Compressing objects: 100% (4724/4724), done.
-remote: Total 783410 (delta 7759), reused 8355 (delta 6230), pack-reused 772391
-Receiving objects: 100% (783410/783410), 157.51 MiB | 8.07 MiB/s, done.
-Resolving deltas: 100% (651893/651893), done.
-
-# compilation steps
-
-# cd to u-boot directory, remove any previously compiled files if needed
-% make CROSS_COMPILE=arm-linux-gnueabihf- distclean
-
-# apply board default configuration
-% make CROSS_COMPILE=arm-linux-gnueabihf- nanopi_m1_defconfig
-  HOSTCC  scripts/basic/fixdep
-  HOSTCC  scripts/kconfig/conf.o
-  YACC    scripts/kconfig/zconf.tab.c
-  LEX     scripts/kconfig/zconf.lex.c
-  HOSTCC  scripts/kconfig/zconf.tab.o
-  HOSTLD  scripts/kconfig/conf
-
-  configuration written to .config
-
-# optional: run menuconfig to customize settings other than default config
-% make CROSS_COMPILE=arm-linux-gnueabihf- menuconfig
-
-# install the 'swig' package (required for compilation step)
-sudo pacman -S swig
-
-# compile
-% make CROSS_COMPILE=arm-linux-gnueabihf- -j$(nproc)
-
-# confirm 'u-boot-sunxi-with-spl.bin' was created:
-% ls
-api        disk      Kbuild       README      u-boot.cfg          u-boot.map
-arch       doc       Kconfig      scripts     u-boot.cfg.configs  u-boot-nodtb.bin
-board      drivers   lib          spl         u-boot.dtb          u-boot.srec
-build      dts       Licenses     System.map  u-boot-dtb.bin      u-boot-sunxi-with-spl.bin
-cmd        env       MAINTAINERS  test        u-boot-dtb.img      u-boot-sunxi-with-spl.map
-common     examples  Makefile     tools       u-boot.dtb.out      u-boot.sym
-config.mk  fs        net          u-boot      u-boot.img
-configs    include   post         u-boot.bin  u-boot.lds
+# next, behold the incredulous glory of U-Boot and Linux on the ZeroPi
 
 ```
-
-----------------------------------------------------------------------------------------
-
-### boot script </br>
-
-U-Boot automatically looks for and loads ```boot.scr``` and ```uEnv.txt```.
-Our platform only uses ```boot.scr```.
-
-Create a file ```boot.cmd``` containing the source below (from the [Arch Wiki](https://wiki.archlinux.org/title/NanoPi_M1)):
-
-```zsh
-
-part uuid ${devtype} ${devnum}:${bootpart} uuid
-setenv bootargs console=${console} root=PARTUUID=${uuid} rw rootwait
-
-if load ${devtype} ${devnum}:${bootpart} ${kernel_addr_r} /boot/zImage; then
-  if load ${devtype} ${devnum}:${bootpart} ${fdt_addr_r} /boot/dtbs/${fdtfile}; then
-    if load ${devtype} ${devnum}:${bootpart} ${ramdisk_addr_r} /boot/initramfs-linux.img; then
-      bootz ${kernel_addr_r} ${ramdisk_addr_r}:${filesize} ${fdt_addr_r};
-    else
-      bootz ${kernel_addr_r} - ${fdt_addr_r};
-    fi;
-  fi;
-fi
-
-if load ${devtype} ${devnum}:${bootpart} 0x48000000 /boot/uImage; then
-  if load ${devtype} ${devnum}:${bootpart} 0x43000000 /boot/script.bin; then
-    setenv bootm_boot_mode sec;
-    bootm 0x48000000;
-  fi;
-fi
-
-```
-
-Compile ```boot.scr``` from ```boot.cmd``` using ```mkimage``` in the ```uboot-tools``` package.
-
-```zsh
-# install uboot-tools
-% sudo pacman -S uboot-tools
-
-# compile boot.scr
-% # mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "ZeroPi Boot Script" -d boot.cmd boot.scr
-
-```
-
-----------------------------------------------------------------------------------------
-
-### SD Card: Write </br>
-
-// mount the file system
-
-// download and extract linux root file system
-
-// write spl and u-boot
-
-// write boot script 
 
 ----------------------------------------------------------------------------------------
 
