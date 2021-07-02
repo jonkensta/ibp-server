@@ -22,11 +22,13 @@ Our platform uses an SD card containing three elements:
 
 ```zsh
 
-# compile SPL and U-Boot
+# setup u-boot toolchain
 yay -S arm-linux-gnueabihf-gcc-stage1
 yay -S arm-linux-gnueabihf-gcc-stage2
 yay -S arm-linux-gnueabihf-gcc
 pacman -S swig
+
+# compile SPL and U-Boot
 git clone https://source.denx.de/u-boot/u-boot.git
 cd u-boot
 make CROSS_COMPILE=arm-linux-gnueabihf- nanopi_m1_defconfig
