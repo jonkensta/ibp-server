@@ -137,10 +137,10 @@ configs    include   post         u-boot.bin  u-boot.lds
 
 ### boot script </br>
 
-U-Boot automatically looks for and loads ```boot.scr``` and ```uEnv.txt```.
+U-Boot automatically looks for and execs ```boot.scr``` and ```uEnv.txt```.
 Our platform only uses ```boot.scr```.
 
-Create a file ```boot.cmd``` containing the source below (from the [Arch Wiki](https://wiki.archlinux.org/title/NanoPi_M1)):
+Create a file ```boot.cmd``` containing the source below (from the [Arch Wiki](https://wiki.archlinux.org/title/NanoPi_M1))
 
 ```zsh
 
@@ -190,7 +190,6 @@ Note this process completely rewrites the SD card; all existing data will be los
 ```zsh
 
 # confirm SD card name 'sdX', for example, 'sdc' below
-
 % lsblk
 NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
 sda           8:0    1     0B  0 disk 
@@ -202,7 +201,6 @@ nvme0n1     259:0    0 465.8G  0 disk
 └─nvme0n1p3 259:3    0 457.3G  0 part /
 
 # write zeros to the beginning of the card (replace 'sdX' with your SD card name)
-
 % sudo dd if=/dev/zero of=/dev/sdX bs=1M count=8
 [sudo] password for root: 
 8+0 records in
