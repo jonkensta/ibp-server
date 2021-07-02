@@ -270,7 +270,7 @@ nvme0n1     259:0    0 465.8G  0 disk
 # unmount the SD card mount point /mnt/<foo>
 % sudo umount /mnt/zeropi/mnt
 
-# next, behold the incredulous glory of U-Boot and Linux on the ZeroPi
+# next, behold the stupendous glory of U-Boot and Linux on the ZeroPi
 
 ```
 
