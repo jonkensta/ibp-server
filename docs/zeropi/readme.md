@@ -214,7 +214,6 @@ nvme0n1     259:0    0 465.8G  0 disk
 Welcome to fdisk (util-linux 2.37).
 Changes will remain in memory only, until you decide to write them.
 Be careful before using the write command.
-
 Command (m for help): 
 
 # create a new empty DOS partition table
@@ -392,7 +391,8 @@ compilation steps using the CLI-based ```menuconfig``` tool included with U-Boot
 **Linux:** </br>
 
 This board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
-//TODO
+
+//TODO - add a note here about the CPU, SoC, Board, and DTB sources in Linux
 
 ----------------------------------------------------------------------------------------
 
