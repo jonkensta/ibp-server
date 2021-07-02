@@ -398,8 +398,33 @@ This board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
 
 ----------------------------------------------------------------------------------------
 
+### Serial Console </br>
 
-Notes:
+// recommended usb to serial cable type
 
-look at messages:
-dmesg -T --follow
+// pins
+look at messages: dmesg -T --follow
+
+// picocom package and settings
+
+// example of expected output
+
+----------------------------------------------------------------------------------------
+
+### OS Setup </br>
+
+// plug in ethernet, make sure you can ping
+
+// init pacman keyring 
+
+// install vi, vim, neovim, sudo, networkmanager, bash-completion, openssh
+
+// setup hostname, hosts, locale, language, timezone, hardware clock
+
+// setup pacman mirrorlist, reflector
+
+// user management: change root pw, add base user, remove alarm user, config sudoers
+
+// enable trim for SSD card? enable network manager, reboot and check for boot errors
+
+----------------------------------------------------------------------------------------
