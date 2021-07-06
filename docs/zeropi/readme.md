@@ -405,7 +405,6 @@ https://www.adafruit.com/product/954
 **Wiring Guide** </br>
 
 | NanoPi | NanoPi |  USB to   |
-|:------:|:------:|:---------:|
 |  Pin   | signal |  Serial   |
 |:------:|:------:|:---------:|
 |   1    |  GND   |           |
