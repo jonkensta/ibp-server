@@ -404,22 +404,67 @@ https://www.adafruit.com/product/954
 
 **Wiring Guide** </br>
 
-| NanoPi | NanoPi |  USB to   |
-|  Pin   | signal |  Serial   |
-|:------:|:------:|:---------:|
-|   1    |  GND   |           |
-|   2    | VDD_5V |           |
-|   3    |        |           |
-|   4    |        |           |
+| NanoPi (pin) | NanoPi (signal) | USB to Serial |
+|:------------:|:---------------:|:-------------:|
+|      1       |    GND          |     black     |
+|      2       |    VDD 5V       |     red       |
+|      3       |    UART TXD0    |     white     |
+|      4       |    UART RXD0    |     green     |
 
 
-// pins, reboot
+**Console Setup** </br>
 
-// look for usb device with dmesg -T --follow
+```zsh
+# use dmesg to verify the tty for your device
+% sudo dmesg -T --follow
 
-// picocom package and settings
+# for example, ttyUSB0
+usb 1-3.2: new full-speed USB device number 7 using xhci_hcd
+usb 1-3.2: New USB device found, idVendor=10c4, idProduct=ea60, bcdDevice= 1.00
+usb 1-3.2: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+usb 1-3.2: Product: CP2102 USB to UART Bridge Controller
+usb 1-3.2: Manufacturer: Silicon Labs
+usb 1-3.2: SerialNumber: 0001
+cp210x 1-3.2:1.0: cp210x converter detected
+usb 1-3.2: cp210x converter now attached to ttyUSB0
 
-// example of expected output
+# if dmesg lists a new USB device but there is no message about tty attached,
+# reboot your host machine with the USB serial cable attached and check again
+
+# install and use picocom to connect to the ZeroPi via /dev/<ttyUSB>
+% sudo pacman -S picocom
+% picocom --baud 115200 /dev/ttyUSB0
+picocom v3.1
+
+port is        : /dev/ttyUSB0
+flowcontrol    : none
+baudrate is    : 115200
+parity is      : none
+databits are   : 8
+stopbits are   : 1
+escape is      : C-a
+local echo is  : no
+noinit is      : no
+noreset is     : no
+hangup is      : no
+nolock is      : no
+send_cmd is    : sz -vv
+receive_cmd is : rz -vv -E
+imap is        : 
+omap is        : 
+emap is        : crcrlf,delbs,
+logfile is     : none
+initstring     : none
+exit_after is  : not set
+exit is        : no
+
+Type [C-a] [C-h] to see available commands
+Terminal ready
+
+# if the ZeroPi is already booted up, hit <enter> and you should see the login prompt.
+alarm login: 
+
+```
 
 ----------------------------------------------------------------------------------------
 
