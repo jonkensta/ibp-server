@@ -398,7 +398,21 @@ This board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
 
 ### Serial Console </br>
 
-// recommended usb to serial cable type
+**Serial Cable** </br>
+We use a USB to TTL Serial Cable from Adafruit:
+https://www.adafruit.com/product/954
+
+**Wiring Guide** </br>
+
+|    NanoPi    |           |
+|:---:|:------:|           |
+| Pin | signal | USB Cable |
+|:---:|:------:|:---------:|
+|  1  |  GND   |           |
+|  2  | VDD_5V |           |
+|  3  |        |           |
+|  4  |        |           |
+
 
 // pins, reboot
 
