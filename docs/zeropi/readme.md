@@ -404,14 +404,14 @@ https://www.adafruit.com/product/954
 
 **Wiring Guide** </br>
 
-|    NanoPi    |           |
-|:---:|:------:|           |
-| Pin | signal | USB Cable |
-|:---:|:------:|:---------:|
-|  1  |  GND   |           |
-|  2  | VDD_5V |           |
-|  3  |        |           |
-|  4  |        |           |
+| NanoPi | NanoPi |  USB to   |
+|:------:|:------:|:---------:|
+|  Pin   | signal |  Serial   |
+|:------:|:------:|:---------:|
+|   1    |  GND   |           |
+|   2    | VDD_5V |           |
+|   3    |        |           |
+|   4    |        |           |
 
 
 // pins, reboot
