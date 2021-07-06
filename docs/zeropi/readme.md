@@ -31,7 +31,7 @@ pacman -S swig
 # compile SPL and U-Boot
 git clone https://source.denx.de/u-boot/u-boot.git
 cd u-boot
-make CROSS_COMPILE=arm-linux-gnueabihf- nanopi_m1_defconfig
+make CROSS_COMPILE=arm-linux-gnueabihf- nanopi_neo_defconfig
 make CROSS_COMPILE=arm-linux-gnueabihf- -j$(nproc)
 
 # compile boot.scr (requires boot.cmd)
@@ -99,7 +99,7 @@ Resolving deltas: 100% (651893/651893), done.
 % make CROSS_COMPILE=arm-linux-gnueabihf- distclean
 
 # apply board default configuration
-% make CROSS_COMPILE=arm-linux-gnueabihf- nanopi_m1_defconfig
+% make CROSS_COMPILE=arm-linux-gnueabihf- nanopi_neo_defconfig
   HOSTCC  scripts/basic/fixdep
   HOSTCC  scripts/kconfig/conf.o
   YACC    scripts/kconfig/zconf.tab.c
@@ -259,7 +259,7 @@ nvme0n1     259:0    0 465.8G  0 disk
 ├─nvme0n1p2 259:2    0     8G  0 part [SWAP]
 └─nvme0n1p3 259:3    0 457.3G  0 part /
 
-# create the ext4 filesystem, this will take a minute or so
+# create the ext4 filesystem on sdX1 (not sdX), this will take a minute or so
 % sudo mkfs.ext4 /dev/sdX1
 [sudo] password for root: 
 mke2fs 1.46.2 (28-Feb-2021)
@@ -274,7 +274,7 @@ Creating journal (16384 blocks): done
 Writing superblocks and filesystem accounting information: done  
 
 # mount the file system to /mnt/<foo>
-% sudo mount -p /dev/sdX1 /mnt/zeropi/mnt
+% sudo mount /dev/sdX1 /mnt/zeropi/mnt
 
 # verify
 % lsblk
@@ -380,10 +380,10 @@ Board inits occur during the full U-Boot process. All ```sunxi``` boards use the
 source for common initialization settings but the ZeroPi does not have a specific
 Default Configuration. This is not unusual; multiple boards from a particular vendor
 will often share the same components and thus the same configuration settings. We use
-the ```NanoPi M1``` defconfig as it is very similar to the ```ZeroPi```.
+the ```NanoPi Neo``` defconfig as it is very similar to the ```ZeroPi```.
 
 - Board: ```u-boot/board/sunxi```
-- Default Configuration: ```u-boot/configs/nanopi_m1_defconfig``` 
+- Default Configuration: ```u-boot/configs/nanopi_neo_defconfig``` 
 
 NOTE: additional customization of the Default Configuration is possible during the
 compilation steps using the CLI-based ```menuconfig``` tool included with U-Boot.
@@ -399,8 +399,7 @@ This board is fully supported by mainline Linux (linux/arch/arm/mach-sunxi)
 ### Serial Console </br>
 
 **Serial Cable** </br>
-We use a USB to TTL Serial Cable from Adafruit:
-https://www.adafruit.com/product/954
+We use a USB to TTL Serial Cable from [Adafruit](https://www.adafruit.com/product/954).
 
 **Wiring Guide** </br>
 
@@ -462,6 +461,7 @@ Type [C-a] [C-h] to see available commands
 Terminal ready
 
 # if the ZeroPi is already booted up, hit <enter> and you should see the login prompt.
+
 alarm login: 
 
 ```
@@ -471,6 +471,7 @@ alarm login:
 ### OS Setup </br>
 
 // plug in ethernet, make sure you can ping
+
 
 // init pacman keyring 
 
