@@ -470,19 +470,80 @@ alarm login:
 
 ### OS Setup </br>
 
-// plug in ethernet, make sure you can ping
+```zsh
+# verify ethernet/dhcp; for example, here eth0 is down but eth1 is up and working
+% ip link
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eth0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc mq state DOWN mode DEFAULT group default qlen 1000
+    link/ether 7e:41:60:87:ce:1f brd ff:ff:ff:ff:ff:ff
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+    link/ether 00:0e:c6:a4:bb:76 brd ff:ff:ff:ff:ff:ff
 
+# you might need to start dhcp manually (as root)
+% systemctl start dhcpcd.service
 
-// init pacman keyring 
+# init the pacman keyring
+% pacman-key --init
+% pacman-key --populate archlinuxarm
 
-// install vi, vim, neovim, sudo, networkmanager, bash-completion, openssh
+# install network manager, enable/start, and then stop dhcpcd.service
+% pacman -S networkmanager
+% systemctl stop dhcpcd.service
+% systemctl enable NetworkManager
+% systemctl start NetworkManager
 
-// setup hostname, hosts, locale, language, timezone, hardware clock
+# install vim, neovim, sudo, bash-completion
+% pacman -S vim neovim sudo bash-completion
+
+# setup hostname
+% echo myhostname > /etc/hostname
+
+# setup hosts
+% vim /etc/hosts
+
+127.0.0.1   localhost
+::1         localhost
+127.0.1.1   <myhostname>.localdomain    <myhostname>
+
+# setup locale
+% vim /etc/locale.gen # uncomment your locale ('en_US.UTF-8')
+% locale-gen # generate the new locale
+% locale # show current locale
+% locale -a # show available locales
+
+# setup language
+% echo LANG=en_US.UTF-8 > /etc/locale.conf
+% export LANG=en_US.UTF-8
+
+# setup timezone
+% timedatectl list-timezones
+% timedatectl set-timezone US/Central
+% ln -sf /usr/share/zoneinfo/US/Central /etc/localtime
+
+# setup ntp
+pacman -S ntp
+systemctl enable ntpd.service
+systemctl start ntpd.service
+timedatectl set-ntp true
+
+# setup hardware clock
+hwclock --systohc --utc  # generates /etc/adjtime
+
+# verify
+timedatectl
+date
+hwclock --verbose
+
+# enable trim for SSDs (weekly timer)
+sudo systemctl enable fstrim.timer  # inactive until reboot
+
+# reboot and check for boot errors
+% journalctl -b
+
+```
 
 // setup pacman mirrorlist, reflector
-
 // user management: change root pw, add base user, remove alarm user, config sudoers
-
-// enable trim for SSD card? enable network manager, reboot and check for boot errors
 
 ----------------------------------------------------------------------------------------
