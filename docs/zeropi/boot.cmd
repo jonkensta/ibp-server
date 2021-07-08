@@ -1,5 +1,6 @@
 part uuid ${devtype} ${devnum}:${bootpart} uuid
 setenv bootargs console=${console} root=PARTUUID=${uuid} rw rootwait
+setenv fdtfile sun8i-h3-zeropi.dtb
 
 if load ${devtype} ${devnum}:${bootpart} ${kernel_addr_r} /boot/zImage; then
   if load ${devtype} ${devnum}:${bootpart} ${fdt_addr_r} /boot/dtbs/${fdtfile}; then
