@@ -23,16 +23,14 @@ Our platform uses an SD card containing three elements:
 ```zsh
 
 # setup U-Boot toolchain
-yay -S arm-linux-gnueabihf-gcc-stage1
-yay -S arm-linux-gnueabihf-gcc-stage2
-yay -S arm-linux-gnueabihf-gcc
+pacman -S arm-none-eabi-gcc
 pacman -S swig
 
 # compile SPL and U-Boot
 git clone https://source.denx.de/u-boot/u-boot.git
 cd u-boot
-make CROSS_COMPILE=arm-linux-gnueabihf- nanopi_neo_defconfig
-make CROSS_COMPILE=arm-linux-gnueabihf- -j$(nproc)
+make CROSS_COMPILE=arm-none-eabi- nanopi_neo_defconfig
+make CROSS_COMPILE=arm-none-eabi- -j$(nproc)
 
 # compile boot.scr (requires boot.cmd)
 pacman -S uboot-tools
@@ -56,7 +54,7 @@ sync
 
 # install bootloader and boot script
 dd if=u-boot-sunxi-with-spl.bin of=/dev/sdX bs=1024 seek=8 
-cp boot.scr /mnt/<foo>
+cp boot.scr /mnt/<foo>/boot/.
 umount /mnt/<foo>
 
 # done
@@ -72,16 +70,7 @@ umount /mnt/<foo>
 ```zsh
 
 # install toolchain
-
-# per aur, install gcc in stages to avoid circular dependencies with glibc versions
-% yay -S arm-linux-gnueabihf-gcc-stage1
-
-# conflict note: 'y' to remove gcc-stage1 and replace with gcc-stage2
-% yay -S arm-linux-gnueabihf-gcc-stage2
-
-# conflict note: 'y' to remove glibc-headers and replace with glibc
-# conflict note: 'y' to remove gcc-stage2 and replace with gcc
-% yay -S arm-linux-gnueabihf-gcc
+% pacman -S arm-none-eabi-gcc
 
 # clone U-Boot mainline repo
 % git clone https://source.denx.de/u-boot/u-boot.git
@@ -96,10 +85,10 @@ Resolving deltas: 100% (651893/651893), done.
 # compilation steps
 
 # cd to u-boot directory, remove any previously compiled files if needed
-% make CROSS_COMPILE=arm-linux-gnueabihf- distclean
+% make CROSS_COMPILE=arm-none-eabi- distclean
 
 # apply board default configuration
-% make CROSS_COMPILE=arm-linux-gnueabihf- nanopi_neo_defconfig
+% make CROSS_COMPILE=arm-none-eabi- nanopi_neo_defconfig
   HOSTCC  scripts/basic/fixdep
   HOSTCC  scripts/kconfig/conf.o
   YACC    scripts/kconfig/zconf.tab.c
@@ -110,13 +99,13 @@ Resolving deltas: 100% (651893/651893), done.
   configuration written to .config
 
 # optional: run menuconfig to customize settings other than default config
-% make CROSS_COMPILE=arm-linux-gnueabihf- menuconfig
+% make CROSS_COMPILE=arm-none-eabi- menuconfig
 
 # install the 'swig' package (required for compilation step)
 sudo pacman -S swig
 
 # compile
-% make CROSS_COMPILE=arm-linux-gnueabihf- -j$(nproc)
+% make CROSS_COMPILE=arm-none-eabi- -j$(nproc)
 
 # confirm the bootloader file 'u-boot-sunxi-with-spl.bin' was created:
 % ls
@@ -142,10 +131,14 @@ Our platform only uses `boot.scr`.
 
 Create a file `boot.cmd` containing the source below (from the [Arch Wiki](https://wiki.archlinux.org/title/NanoPi_M1))
 
+Note we added an additional U-Boot environment variable on line 3 for the ZeroPi:
+`setenv fdtfile sun8i-h3-zeropi.dtb`
+
 ```zsh
 
 part uuid ${devtype} ${devnum}:${bootpart} uuid
 setenv bootargs console=${console} root=PARTUUID=${uuid} rw rootwait
+setenv fdtfile sun8i-h3-zeropi.dtb
 
 if load ${devtype} ${devnum}:${bootpart} ${kernel_addr_r} /boot/zImage; then
   if load ${devtype} ${devnum}:${bootpart} ${fdt_addr_r} /boot/dtbs/${fdtfile}; then
@@ -480,18 +473,9 @@ alarm login:
 3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
     link/ether 00:0e:c6:a4:bb:76 brd ff:ff:ff:ff:ff:ff
 
-# you might need to start dhcp manually (as root)
-% systemctl start dhcpcd.service
-
 # init the pacman keyring
 % pacman-key --init
 % pacman-key --populate archlinuxarm
-
-# install network manager, enable/start, and then stop dhcpcd.service
-% pacman -S networkmanager
-% systemctl stop dhcpcd.service
-% systemctl enable NetworkManager
-% systemctl start NetworkManager
 
 # install vim, neovim, sudo, bash-completion
 % pacman -S vim neovim sudo bash-completion
