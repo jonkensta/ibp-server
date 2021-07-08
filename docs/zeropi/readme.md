@@ -14,7 +14,7 @@ The ZeroPi board designed by FriendlyELEC, uses an Allwinner SoC with ARM proces
 Our platform uses an SD card containing three elements:
 1. SPL and U-Boot: compiled together into a single binary
 2. Linux root file system: obtained from ArchLinuxARM latest (contains uImage and dtbs)
-3. The U-Boot script ```boot.scr```, compiled from boot.cmd
+3. The U-Boot script `boot.scr`, compiled from boot.cmd
 
 ----------------------------------------------------------------------------------------
 
@@ -137,10 +137,10 @@ configs    include   post         u-boot.bin  u-boot.lds
 
 ### boot script </br>
 
-U-Boot automatically looks for and execs ```boot.scr``` and ```uEnv.txt```.
-Our platform only uses ```boot.scr```.
+U-Boot automatically looks for and execs `boot.scr` and `uEnv.txt`.
+Our platform only uses `boot.scr`.
 
-Create a file ```boot.cmd``` containing the source below (from the [Arch Wiki](https://wiki.archlinux.org/title/NanoPi_M1))
+Create a file `boot.cmd` containing the source below (from the [Arch Wiki](https://wiki.archlinux.org/title/NanoPi_M1))
 
 ```zsh
 
@@ -166,7 +166,7 @@ fi
 
 ```
 
-Compile ```boot.scr``` from ```boot.cmd``` using ```mkimage``` in the ```uboot-tools``` package.
+Compile `boot.scr` from `boot.cmd` using `mkimage` in the `uboot-tools` package.
 
 ```zsh
 # install uboot-tools
@@ -337,7 +337,7 @@ RBL → SPL → U-Boot → Linux
 3. U-Boot: runs from DDR memory
    - inits relevant peripherals to support loading the kernel
    - runs script to set destinations (DDR memory addresses) for Linux kernel and DTBs
-   - loads Linux kernel image ```/boot/zImage``` and DTB/FDT ```/boot/dtbs``` from the
+   - loads Linux kernel image `/boot/zImage` and DTB/FDT `/boot/dtbs` from the
      SD card to the preset destinations in DDR memory
    - passes arguments (console settings, location of Linux RFS on SD card, and memory
      addresses of Linux kernel and the DTB/FDT in DDR memory) and transfers control to
@@ -366,8 +366,8 @@ example, all boards using an Arm Cortex A7 CPU (such as our ZeroPi), will use th
 CPU initialization code for compilation. Similarly, all boards using an AllWinner H3
 SoC will use the same SoC initialization source code.
 
-- CPU: ```u-boot/arch/arm/cpu/armv7/sunxi```
-- SoC: ```u-boot/arch/arm/mach-sunxi```
+- CPU: `u-boot/arch/arm/cpu/armv7/sunxi`
+- SoC: `u-boot/arch/arm/mach-sunxi`
 
 The SPL functionality (by design) is not as complex as the full U-Boot bootloader. The
 SPL only needs to know about the CPU and some of the SoC peripherals so it can
@@ -376,17 +376,17 @@ initialize these aspects and hand off control to the full U-Boot.
 RBL → [ start.S → CPU inits → SoC inits ] → full U-Boot
 
 **U-Boot:** </br>
-Board inits occur during the full U-Boot process. All ```sunxi``` boards use the same
+Board inits occur during the full U-Boot process. All `sunxi` boards use the same
 source for common initialization settings but the ZeroPi does not have a specific
 Default Configuration. This is not unusual; multiple boards from a particular vendor
 will often share the same components and thus the same configuration settings. We use
-the ```NanoPi Neo``` defconfig as it is very similar to the ```ZeroPi```.
+the `NanoPi Neo` defconfig as it is very similar to the `ZeroPi`.
 
-- Board: ```u-boot/board/sunxi```
-- Default Configuration: ```u-boot/configs/nanopi_neo_defconfig``` 
+- Board: `u-boot/board/sunxi`
+- Default Configuration: `u-boot/configs/nanopi_neo_defconfig`
 
 NOTE: additional customization of the Default Configuration is possible during the
-compilation steps using the CLI-based ```menuconfig``` tool included with U-Boot.
+compilation steps using the CLI-based `menuconfig` tool included with U-Boot.
  
 **Linux:** </br>
 
@@ -496,8 +496,8 @@ alarm login:
 # install vim, neovim, sudo, bash-completion
 % pacman -S vim neovim sudo bash-completion
 
-# setup hostname
-% echo myhostname > /etc/hostname
+# setup hostname, for example a server named "foo"
+% echo foo > /etc/hostname
 
 # setup hosts
 % vim /etc/hosts
@@ -538,12 +538,16 @@ hwclock --verbose
 # enable trim for SSDs (weekly timer)
 sudo systemctl enable fstrim.timer  # inactive until reboot
 
+# add TERM export line to bottom of /etc/profile
+% export TERM=xterm-256color
+
 # reboot and check for boot errors
 % journalctl -b
 
 ```
 
 // setup pacman mirrorlist, reflector
+
 // user management: change root pw, add base user, remove alarm user, config sudoers
 
 ----------------------------------------------------------------------------------------
