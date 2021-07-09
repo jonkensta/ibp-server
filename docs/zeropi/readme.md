@@ -464,21 +464,27 @@ alarm login:
 ### OS Setup </br>
 
 ```zsh
-# verify ethernet/dhcp; for example, here eth0 is down but eth1 is up and working
-% ip link
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+# verify ethernet is up and has an ip address
+% ip link 
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-2: eth0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc mq state DOWN mode DEFAULT group default qlen 1000
-    link/ether 7e:41:60:87:ce:1f brd ff:ff:ff:ff:ff:ff
-3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
-    link/ether 00:0e:c6:a4:bb:76 brd ff:ff:ff:ff:ff:ff
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether ea:bf:68:23:7d:dd brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.32/24 brd 192.168.1.255 scope global dynamic eth0
+       valid_lft 85938sec preferred_lft 85938sec
+    inet6 fe80::e8bf:68ff:fe23:7ddd/64 scope link 
+       valid_lft forever preferred_lft forever
 
 # init the pacman keyring
 % pacman-key --init
 % pacman-key --populate archlinuxarm
 
-# install vim, neovim, sudo, bash-completion
-% pacman -S vim neovim sudo bash-completion
+# install vim, bash-completion
+% pacman -S vim bash-completion
 
 # setup hostname, for example a server named "foo"
 % echo foo > /etc/hostname
