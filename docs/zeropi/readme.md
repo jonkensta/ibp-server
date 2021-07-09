@@ -490,15 +490,15 @@ alarm login:
 ::1         localhost
 127.0.1.1   <myhostname>.localdomain    <myhostname>
 
+# setup language
+% echo LANG=en_US.UTF-8 > /etc/locale.conf
+% export LANG=en_US.UTF-8
+
 # setup locale
 % vim /etc/locale.gen # uncomment your locale ('en_US.UTF-8')
 % locale-gen # generate the new locale
 % locale # show current locale
 % locale -a # show available locales
-
-# setup language
-% echo LANG=en_US.UTF-8 > /etc/locale.conf
-% export LANG=en_US.UTF-8
 
 # setup timezone
 % timedatectl list-timezones
@@ -525,13 +525,18 @@ sudo systemctl enable fstrim.timer  # inactive until reboot
 # add TERM export line to bottom of /etc/profile
 % export TERM=xterm-256color
 
+# add ibp user and set password
+% useradd -m ibp
+% passwd ibp
+
+# delete alarm user
+% userdel alarm
+
 # reboot and check for boot errors
 % journalctl -b
 
+# don't forget to change the root password!
+
 ```
-
-// setup pacman mirrorlist, reflector
-
-// user management: change root pw, add base user, remove alarm user, config sudoers
 
 ----------------------------------------------------------------------------------------
