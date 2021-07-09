@@ -465,7 +465,17 @@ alarm login:
 
 ```zsh
 # verify ethernet is up and has an ip address
-% ip link 
+% ping -c 3 1.1.1.1
+PING 1.1.1.1 (1.1.1.1) 56(84) bytes of data.
+64 bytes from 1.1.1.1: icmp_seq=1 ttl=58 time=19.4 ms
+64 bytes from 1.1.1.1: icmp_seq=2 ttl=58 time=29.1 ms
+64 bytes from 1.1.1.1: icmp_seq=3 ttl=58 time=19.3 ms
+
+--- 1.1.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 19.338/22.629/29.124/4.592 ms
+
+% ip addr 
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
     inet 127.0.0.1/8 scope host lo
@@ -504,10 +514,8 @@ alarm login:
 % vim /etc/locale.gen # uncomment your locale ('en_US.UTF-8')
 % locale-gen # generate the new locale
 % locale # show current locale
-% locale -a # show available locales
 
 # setup timezone
-% timedatectl list-timezones
 % timedatectl set-timezone US/Central
 % ln -sf /usr/share/zoneinfo/US/Central /etc/localtime
 
@@ -526,7 +534,7 @@ date
 hwclock --verbose
 
 # enable trim for SSDs (weekly timer)
-sudo systemctl enable fstrim.timer  # inactive until reboot
+systemctl enable fstrim.timer  # inactive until reboot
 
 # add TERM export line to bottom of /etc/profile
 % export TERM=xterm-256color
@@ -535,11 +543,11 @@ sudo systemctl enable fstrim.timer  # inactive until reboot
 % useradd -m ibp
 % passwd ibp
 
-# delete alarm user
-% userdel alarm
-
-# reboot and check for boot errors
+# reboot and check for boot errors (as root)
 % journalctl -b
+
+# delete alarm user (after reboot)
+% userdel alarm
 
 # don't forget to change the root password!
 
