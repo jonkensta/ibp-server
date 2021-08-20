@@ -18,3 +18,4 @@ oauth2client
 visitor
 wheel
 wsgiref
+git+git://github.com/jonkensta/inmate-providers@master#egg=pymates

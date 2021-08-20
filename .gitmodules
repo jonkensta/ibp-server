@@ -1,3 +1,0 @@
-[submodule "ibp/providers"]
-	path = ibp/providers
-	url = https://github.com/jonkensta/inmate-providers.git

@@ -13,10 +13,10 @@ from sqlalchemy.ext.associationproxy import association_proxy
 
 from flask_login import current_user
 
-import ibp
+import pymates as providers
 
+import ibp
 from . import oauth2
-from . import providers
 
 db = ibp.db
 session = ibp.db.session
