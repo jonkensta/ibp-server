@@ -5,7 +5,7 @@ from datetime import timedelta
 import logging
 from logging.handlers import RotatingFileHandler
 
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 
 import flask
 from flask import Flask

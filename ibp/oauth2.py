@@ -1,5 +1,5 @@
 import threading
-from urlparse import urljoin
+import urllib.parse
 
 import oauth2client.client as oauth2client
 
@@ -69,7 +69,7 @@ class DatabaseStore(oauth2client.Storage):
 
 
 scopes = [
-    urljoin('https://www.googleapis.com/auth/', scope)
+    urllib.parse.urljoin('https://www.googleapis.com/auth/', scope)
     for scope in ['userinfo.email', 'userinfo.profile']
 ]
 
