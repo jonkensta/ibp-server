@@ -416,7 +416,7 @@ def ship_requests():
             return msg, 400
 
         if inmate.unit.name != unit.name:
-            app.logger.debug("inamtes are not all assigned to '%s' unit", unit.name)
+            app.logger.debug("Inmates are not all assigned to '%s' unit", unit.name)
             return msg, 400
 
     shipment = models.Shipment(
