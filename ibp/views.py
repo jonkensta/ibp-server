@@ -294,7 +294,7 @@ def view_unit(autoid):
 @ibp.appkey_required
 def return_address():
     app.logger.debug("loading return_address view")
-    address = ibp.get_config_section("address")
+    address = dict(ibp.config["address"])
     return jsonify(address)
 
 
