@@ -3,26 +3,24 @@ from datetime import date, datetime, timedelta
 
 import ibp
 
-logger = logging.getLogger('warnings')
+logger = logging.getLogger("warnings")
 
 
 def _inmate_entry_age_warning(inmate):
     try:
         age = datetime.now() - inmate.datetime_fetched
     except TypeError:
-        msg = (
-            "Data entry for {} inmate #{:08d} has never been verified"
-            .format(inmate.jurisdiction, inmate.id)
+        msg = "Data entry for {} inmate #{:08d} has never been verified".format(
+            inmate.jurisdiction, inmate.id
         )
         logger.debug(msg)
         return msg
 
-    inmates_cache_ttl = ibp.config.getint('warnings', 'inmates_cache_ttl')
+    inmates_cache_ttl = ibp.config.getint("warnings", "inmates_cache_ttl")
     ttl = timedelta(hours=inmates_cache_ttl)
     if age > ttl:
-        msg = (
-            "Data entry for {} inmate #{:08d} is {} day(s) old"
-            .format(inmate.jurisdiction, inmate.id, age.days)
+        msg = "Data entry for {} inmate #{:08d} is {} day(s) old".format(
+            inmate.jurisdiction, inmate.id, age.days
         )
         logger.debug(msg)
         return msg
@@ -36,20 +34,18 @@ def _inmate_release_warning(inmate):
     except TypeError:
         return None
 
-    days = ibp.config.getint('warnings', 'min_release_timedelta')
+    days = ibp.config.getint("warnings", "min_release_timedelta")
     min_timedelta = timedelta(days=days)
 
     if to_release <= timedelta(0):
-        msg = (
-            "{} inmate #{:08d} is marked as released"
-            .format(inmate.jurisdiction, inmate.id)
+        msg = "{} inmate #{:08d} is marked as released".format(
+            inmate.jurisdiction, inmate.id
         )
         logger.debug(msg)
         return msg
     elif to_release <= min_timedelta:
-        msg = (
-            "{} inmate #{:08d} is {} days from release."
-            .format(inmate.jurisdiction, inmate.id, to_release.days)
+        msg = "{} inmate #{:08d} is {} days from release.".format(
+            inmate.jurisdiction, inmate.id, to_release.days
         )
         logger.debug(msg)
         return msg
@@ -69,17 +65,17 @@ def request(inmate, postmarkdate):
     messages = []
 
     def was_filled(request):
-        return request.action == 'Filled'
+        return request.action == "Filled"
 
     requests = filter(was_filled, inmate.requests)
 
     try:
-        last_filled_request = requests.pop(0)
-    except IndexError:
+        last_filled_request = next(requests)
+    except StopIteration:
         return messages
 
     td = postmarkdate - last_filled_request.date_postmarked
-    days = ibp.config.getint('warnings', 'min_postmark_timedelta')
+    days = ibp.config.getint("warnings", "min_postmark_timedelta")
     min_td = timedelta(days=days)
 
     msg = None

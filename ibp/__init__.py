@@ -1,99 +1,57 @@
+"""Initialize the IBP flask application."""
+
 import os
+import urllib
 import functools
+
+from pathlib import Path
 from datetime import timedelta
 
 import logging
 from logging.handlers import RotatingFileHandler
 
-from configparser import SafeConfigParser
+import configparser
 
 import flask
 from flask import Flask
-from flask_login import LoginManager
-from flask_wtf.csrf import CSRFProtect
-from flask_bootstrap import Bootstrap
-from flask_sqlalchemy import SQLAlchemy
-
-config = SafeConfigParser()
-
-flask_env = os.getenv('FLASK_ENV', 'production')
-if flask_env == 'production':
-    config_fname = 'production.conf'
-else:
-    config_fname = 'development.conf'
-
-local_dir = os.path.dirname(os.path.realpath(__file__))
-root_dir = os.path.join(local_dir, os.path.pardir)
-config_fpath = os.path.abspath(os.path.join(root_dir, 'conf', config_fname))
-config.read(config_fpath)
-
-# configure logging
-log = logging.getLogger()
-log_level = logging.getLevelName(config.get('logging', 'level'))
-log.setLevel(log_level)
-
-logging.getLogger('urllib3').setLevel(logging.ERROR)
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
-logging.getLogger('requests').setLevel(logging.ERROR)
-logging.getLogger('oauth2client.client').setLevel(logging.ERROR)
-logging.getLogger('googleapiclient.discovery').setLevel(logging.ERROR)
-logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
-
-log_formatter = logging.Formatter(config.get('logging', 'format', raw=True))
-
-log_handler = logging.StreamHandler()
-log_handler.setFormatter(log_formatter)
-log.addHandler(log_handler)
-
-log_file_handler = RotatingFileHandler(
-    config.get('logging', 'logfile'),
-    maxBytes=config.getint('logging', 'rotation_size')
-)
-log_file_handler.setFormatter(log_formatter)
-log_file_handler.setLevel(log_level)
-log.addHandler(log_file_handler)
+from flask_wtf.csrf import CSRFProtect  # type: ignore
+from flask_bootstrap import Bootstrap  # type: ignore
+from flask_sqlalchemy import SQLAlchemy  # type: ignore
 
 
-class RotatingStream(object):
-
-    def __init__(self, max_lines=1000):
-        self._max_lines = int(max_lines)
-        self._buffer = ''
-        self.lines = []
-
-    def write(self, s):
-        self._buffer += s
-
-        # append the newly written lines
-        lines = self._buffer.split('\n')
-        self.lines.extend(lines[:-1])
-        self._buffer = lines[-1]
-
-        # coerce to max_lines length
-        self.lines = self.lines[-self._max_lines:]
+def get_toplevel_path() -> Path:
+    """Get project toplevel path."""
+    return Path(__file__).parent.parent
 
 
-log_stream = RotatingStream()
-log_handler = logging.StreamHandler(log_stream)
-log_handler.setFormatter(log_formatter)
-log.addHandler(log_handler)
+def read_server_config():
+    """Read configuration file at module load time."""
+    toplevel = get_toplevel_path()
+    filepath = os.path.join(toplevel, "conf", "server.conf")
+    server_config = configparser.ConfigParser()
+    server_config.read([filepath])
+    return server_config
+
+
+config = read_server_config()  # pylint: disable=invalid-name
 
 # setup flask application
 app = Flask(__name__)
-app.logger.setLevel(log_level)
-app.logger.addHandler(log_file_handler)
-app.logger.addHandler(log_handler)
 
-log.info("Starting IBP Application")
 
-database_fpath = os.path.join(root_dir, config.get('database', 'database'))
-database_fpath = os.path.abspath(database_fpath)
-database_uri = 'sqlite:///' + database_fpath
+def get_database_uri():
+    toplevel = get_toplevel_path()
+    filepath = toplevel.joinpath(config.get("database", "database")).absolute()
+    uri_parts = ("sqlite", "/", str(filepath), "", "", "")  # netloc needs to be "/".
+    return urllib.parse.urlunparse(uri_parts)
+
+
+database_uri = get_database_uri()
 
 app.config.update(
-    SECRET_KEY=config.get('server', 'secret_key'),
-    SQLALCHEMY_DATABASE_URI=database_uri,
-    SQLALCHEMY_TRACK_MODIFICATIONS=False
+    SECRET_KEY=config.get("server", "secret_key"),
+    SQLALCHEMY_DATABASE_URI=get_database_uri(),
+    SQLALCHEMY_TRACK_MODIFICATIONS=False,
 )
 
 Bootstrap(app)
@@ -101,39 +59,98 @@ csrf = CSRFProtect(app)
 
 db = SQLAlchemy(app)
 db.Model.metadata.naming_convention = {
-    'ix': 'ix_%(column_0_label)s',
-    'uq': 'uq_%(table_name)s_%(column_0_name)s',
-    'ck': 'ck_%(table_name)s_%(constraint_name)s',
-    'fk': 'fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s',
-    'pk': 'pk_%(table_name)s'
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
 }
 
-app.config['REMEMBER_COOKIE_DURATION'] = timedelta(minutes=10)
-login_manager = LoginManager(app)
+app.config["REMEMBER_COOKIE_DURATION"] = timedelta(minutes=10)
+
+# configure logging
 
 
-# convenience methods
-def get_config_section(section):
-    config = {}
-    options = ibp.config.options(section)
-    for option in options:
-        try:
-            config[option] = ibp.config.get(section, option)
-        except Exception:
-            config[option] = None
-    return config
+class RotatingStream:
+    """Model a rotating stream for logging purposes."""
+
+    def __init__(self, max_lines=1000):
+        """Initialize the rotating stream."""
+        self._max_lines = int(max_lines)
+        self._buffer = ""
+        self.lines = []
+
+    def write(self, s):
+        """Write a string to the rotating stream."""
+        self._buffer += s
+
+        # append the newly written lines
+        *lines, self._buffer = self._buffer.split(logging.StreamHandler.terminator)
+        self.lines.extend(lines)
+
+        # coerce to max_lines length
+        self.lines = self.lines[(-self._max_lines) :]  # noqa: E203
+
+    def flush(self, *args, **kwargs):
+        """Flush the rotating stream."""
+
+
+log_stream = RotatingStream()
+
+
+def build_log_handlers():
+    """Build the log handlers for the IBP application."""
+    format_ = config.get("logging", "format", raw=True)
+    formatter = logging.Formatter(format_)
+
+    handler = RotatingFileHandler(
+        config.get("logging", "logfile"),
+        maxBytes=config.getint("logging", "rotation_size"),
+    )
+    handler.setFormatter(formatter)
+    yield handler
+
+    handler = logging.StreamHandler(stream=log_stream)
+    handler.setFormatter(formatter)
+    yield handler
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    yield handler
+
+
+app.logger.handlers = []
+log_level = logging.getLevelName(config.get("logging", "level"))
+log_handlers = list(build_log_handlers())
+
+for logger in (
+    app.logger,
+    logging.getLogger("PROVIDERS"),
+):
+    logger.setLevel(log_level)
+    for handler in log_handlers:
+        logger.addHandler(handler)
+
+for logger in (
+    logging.getLogger("urllib3"),
+    logging.getLogger("werkzeug"),
+    logging.getLogger("requests"),
+):
+    logger.setLevel(logging.ERROR)
+
+app.logger.info("Starting IBP Application")
 
 
 def appkey_required(view_function):
-    correct_appkey = config.get('server', 'apikey')
+    """Require an appkey for a given view."""
+    correct_appkey = config.get("server", "apikey")
 
     @functools.wraps(view_function)
     def inner(*args, **kwargs):
-        received_appkey = flask.request.form.get('key')
+        received_appkey = flask.request.form.get("key")
         if received_appkey == correct_appkey:
             return view_function(*args, **kwargs)
-        else:
-            return "an application key is required", 401
+        return "an application key is required", 401
 
     return inner
 

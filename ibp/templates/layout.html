@@ -60,7 +60,6 @@
             <ul class="nav navbar-nav">
               <li class="{{ 'active' if request.path == '/inmates' }}"><a href="{{ url_for('search_inmates') }}">Inmates</a></li>
               <li class="{{ 'active' if request.path == '/list_units' }}"><a href="{{ url_for('list_units') }}">Units</a></li>
-              <li class="{{ 'active' if request.path == '/metrics' }}"><a href="{{ url_for('metrics') }}">Metrics</a></li>
               <li class="{{ 'active' if request.path == '/view_log' }}"><a href="{{ url_for('view_log') }}">Log</a></li>
             </ul>
             <ul class="nav navbar-nav navbar-right">

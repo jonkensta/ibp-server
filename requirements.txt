@@ -1,3 +1,4 @@
+wheel
 alembic
 BeautifulSoup4
 Flask
@@ -7,7 +8,6 @@ Flask-WTF
 Flask-Login
 Jinja2
 gunicorn
-wheel
 google-api-python-client
 SQLAlchemy
 oauth2client

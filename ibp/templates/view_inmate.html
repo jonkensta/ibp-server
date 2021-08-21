@@ -294,30 +294,22 @@ jQuery(window).ready(function($) {
             e.stopPropagation();
             $("#request-fill").prop("disabled", true);
 
-            var alerts = checkAlerts();
+            var warnings = checkWarnings();
 
-            alerts.done(function() {
-                var warnings = checkWarnings();
-
-                warnings.done(function() {
-                    fill().done(function(result) {
-                        var id = result["request_autoid"];
-                        $('#request-label-' + id).focus();
-                    });
-                });
-
-                warnings.fail(function() {
-                    toss().done(function() {
-                        $('#id_').focus();
-                    });
+            warnings.done(function() {
+                fill().done(function(result) {
+                    var id = result["request_autoid"];
+                    $('#request-label-' + id).focus();
                 });
             });
 
-            alerts.fail(function() {
-                $('#id_').focus();
+            warnings.fail(function() {
+                toss().done(function() {
+                    $('#id_').focus();
+                });
             });
 
-            alerts.always(function() {
+            warnings.always(function() {
                 setTimeout(function() {
                     $("#request-fill").prop("disabled", false);
                 }, 1000);
