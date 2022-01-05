@@ -63,6 +63,37 @@ app = bottle.Bottle()  # pylint: disable=invalid-name
 ###########
 
 
+def get_cors_headers() -> dict[str, str]:
+    """Get the CORS headers used within this app."""
+    return {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": ", ".join(["GET", "POST", "PUT", "OPTIONS"]),
+        "Access-Control-Allow-Headers": ", ".join(
+            [
+                "Origin",
+                "Accept",
+                "Content-Type",
+                "X-Requested-With",
+                "X-CSRF-Token",
+            ]
+        ),
+    }
+
+
+def enable_cors(callback):
+    """Enable CORS for all routes."""
+
+    @functools.wraps(callback)
+    def wrapper(*args, **kwargs):
+        bottle.response.headers.update(get_cors_headers())
+        return callback(*args, **kwargs)
+
+    return wrapper
+
+
+app.install(enable_cors)
+
+
 def create_sqlalchemy_session(callback):
     """Create and close SQLAlchemy sessions for all routes."""
 
@@ -106,6 +137,7 @@ def default_error_handler(error):
     """Handle Bottle errors by setting status code and returning body."""
     bottle.response.content_type = "application/json"
     bottle.response.status = error.status
+    bottle.response.headers.update(get_cors_headers())
 
     if isinstance(error.body, list):
         messages = [str(message) for message in error.body]
@@ -253,6 +285,16 @@ def ship_request(session, request):
     session.commit()
 
     return schemas.shipment.dump(shipment)
+
+
+#################
+# Options route #
+#################
+
+
+@app.route("/<:re:.*>", method="OPTIONS", skip=[create_sqlalchemy_session])
+def enable_options_generic_route():
+    """Respond to all OPTIONS method for all routes."""
 
 
 #################
