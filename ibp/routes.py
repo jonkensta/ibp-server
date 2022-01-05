@@ -67,7 +67,9 @@ def get_cors_headers() -> dict[str, str]:
     """Get the CORS headers used within this app."""
     return {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": ", ".join(["GET", "POST", "PUT", "OPTIONS"]),
+        "Access-Control-Allow-Methods": ", ".join(
+            ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        ),
         "Access-Control-Allow-Headers": ", ".join(
             [
                 "Origin",
