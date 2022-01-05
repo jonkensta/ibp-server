@@ -62,8 +62,10 @@ def generate_comments(connection, inmate_autoid):
     for index, comment in enumerate(comments):
         comment.pop("inmate_id")
         comment.pop("autoid")
+
         comment["index"] = index
         comment["datetime"] = parse_datetime(comment["datetime"])
+
         yield ibp.models.Comment(**comment)
 
 
