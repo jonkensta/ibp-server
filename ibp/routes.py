@@ -120,9 +120,10 @@ app.install(bottle.JSONPlugin())
 
 def send_bytes(bytes_, mimetype):
     """Bottle method for sending bytes objects."""
-    headers = dict()
-    headers["Content-Type"] = mimetype
-    headers["Content-Length"] = len(bytes_)
+    headers = {
+        "Content-Type": mimetype,
+        "Content-Length": len(bytes_),
+    }
 
     body = "" if bottle.request.method == "HEAD" else bytes_
     return bottle.HTTPResponse(body, **headers)
