@@ -433,6 +433,7 @@ def delete_request(session, request):
     """
     session.delete(request)
     session.commit()
+    return {}
 
 
 @app.put("/request/<jurisdiction>/<inmate_id:int>/<index:int>")
@@ -643,6 +644,7 @@ def delete_comment(session, comment):
     """
     session.delete(comment)
     session.commit()
+    return {}
 
 
 @app.put("/comment/<jurisdiction>/<inmate_id:int>/<index:int>")
