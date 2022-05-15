@@ -142,10 +142,11 @@ def default_error_handler(error):
     bottle.response.status = error.status
     bottle.response.headers.update(get_cors_headers())
 
-    if isinstance(error.body, list):
-        messages = [str(message) for message in error.body]
-    else:
-        messages = [str(error.body)]
+    messages = (
+        [str(message) for message in error.body]
+        if (isinstance(error.body, list))
+        else [str(error.body)]
+    )
 
     return json.dumps({"messages": messages})
 
