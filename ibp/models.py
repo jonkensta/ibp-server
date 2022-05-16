@@ -318,6 +318,7 @@ class Unit(db.Model):
         return (db.UniqueConstraint("jurisdiction", "name"),)
 
     def update_from_form(self, form):
+        self.name = form.name.data
         self.url = form.url.data or None
         self.city = form.city.data
         self.state = form.state.data

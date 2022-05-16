@@ -52,6 +52,10 @@ states = [
 
 
 class Unit(FlaskForm):
+    name = fields.StringField(
+        'Name',
+        [validators.InputRequired()]
+    )
     street1 = fields.StringField(
         'Street Address 1',
         [validators.InputRequired()]
@@ -85,6 +89,7 @@ class Unit(FlaskForm):
         super(Unit, self).__init__(*args, **kwargs)
 
     def update_from_model(self, model):
+        self.name.data = model.name
         self.url.data = model.url or ''
         self.city.data = model.city
         self.state.data = model.state
