@@ -11,16 +11,24 @@ from .models import Inmate
 from .base import get_toplevel_path
 
 
-def create_engine():
-    """Create an engine for our sqlite database."""
+def build_uri():
+    """Build a URI to the sqlite3 database."""
     toplevel = get_toplevel_path()
     filepath = toplevel.joinpath("data.db").absolute()
     uri_parts = ("sqlite", "/", str(filepath), "", "", "")  # netloc needs to be "/".
-    uri = urllib.parse.urlunparse(uri_parts)
-    return sqlalchemy.create_engine(uri)
+    return urllib.parse.urlunparse(uri_parts)
 
 
-Session = sessionmaker(bind=create_engine(), future=True)
+def create_engine():
+    """Create an engine for our sqlite database."""
+    return sqlalchemy.create_engine(
+        build_uri(), connect_args={"check_same_thread": False}
+    )
+
+
+Session = sessionmaker(
+    bind=create_engine(), autocommit=False, autoflush=False, future=True
+)
 
 
 # pylint: disable=redefined-builtin, invalid-name
