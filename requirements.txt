@@ -1,9 +1,8 @@
 alembic
-bottle
-marshmallow
-nameparser
+fastapi
+uvicorn[standard]
+pydantic
 pillow
 python-barcode
-sphinx
 SQLAlchemy
-git+https://github.com/jonkensta/inmate-providers@master#egg=pymates
+git+https://github.com/jonkensta/inmate-providers@main#egg=pymates
