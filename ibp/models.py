@@ -22,8 +22,7 @@ anywhere else apart from here.
 
 # pylint: disable=too-few-public-methods, invalid-name
 
-import typing
-from datetime import datetime, timedelta
+import datetime
 
 from sqlalchemy import (  # type: ignore
     Column,
@@ -36,37 +35,13 @@ from sqlalchemy import (  # type: ignore
     ForeignKey,
 )
 
-from sqlalchemy.orm import relationship  # type: ignore
-from sqlalchemy.processors import str_to_date  # type: ignore
-from sqlalchemy.schema import ForeignKeyConstraint  # type: ignore
-from sqlalchemy.ext.declarative import declared_attr, declarative_base  # type: ignore
+import sqlalchemy.types as types
+from sqlalchemy.orm import relationship
+from sqlalchemy.schema import ForeignKeyConstraint
+from sqlalchemy.ext.declarative import declared_attr
 
 from .base import config
-
-Base: typing.Any = declarative_base()
-"""Base class for :py:mod:`sqlalchemy` models."""
-
-Base.metadata.naming_convention = {
-    "ix": "ix_%(column_0_label)s",
-    "uq": "uq_%(table_name)s_%(column_0_name)s",
-    "ck": "ck_%(table_name)s_%(constraint_name)s",
-    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-    "pk": "pk_%(table_name)s",
-}
-
-
-def update_from_kwargs(self, **kwargs):
-    """Update a model object from given keyword arguments."""
-    for key, value in kwargs.items():
-        if hasattr(self, key):
-            setattr(self, key, value)
-        else:
-            msg = f"'{self.__class__}' has no attribute named '{key}'"
-            raise AttributeError(msg)
-
-
-# Add update_from_kwargs method to Base to provide to all model objects.
-Base.update_from_kwargs = update_from_kwargs
+from .database import Base
 
 
 Jurisdiction = Enum("Texas", "Federal", name="jurisdiction_enum")
@@ -80,7 +55,7 @@ the supported list may be extended to include other jurisdictions in the future
 """
 
 
-class ReleaseDate(String):
+class ReleaseDate(types.TypeDecorator):
     """Inmate release date SQLAlchemy column type.
 
     Sometimes "release dates" returned from the providers are not dates at all;
@@ -94,28 +69,23 @@ class ReleaseDate(String):
     1. We process the string value as a :py:class:`sqlalchemy.types.Date`.
     2. If this fails, we process the value as a :py:class:`sqlalchemy.types.String`.
 
-    :note: This column type subclasses :py:class:`sqlalchemy.types.String`
-           without overriding :py:func:`__init__` and thus uses the same inputs.
-
     """
 
-    # pylint: disable=unused-argument
-    def result_processor(self, dialect, coltype):
-        """Return result processor."""
-        super_result_processor = super().result_processor(dialect, coltype)
+    impl = types.String
 
-        def identity(value):
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        try:
+            return value.isoformat()
+        except AttributeError:
+            return str(value)
+
+    def process_result_value(self, value, dialect):
+        try:
+            return datetime.date.fromisoformat(value)
+        except ValueError:
             return value
-
-        process_string = super_result_processor or identity
-
-        def process(value):
-            try:
-                return str_to_date(value)
-            except ValueError:
-                return process_string(value)
-
-        return process
 
 
 class Inmate(Base):
@@ -216,11 +186,11 @@ class Inmate(Base):
     def db_entry_is_stale(self):
         """Calculate if an inmate database entry is stale based on configuration."""
         try:
-            age = datetime.now() - self.datetime_fetched
+            age = datetime.datetime.now() - self.datetime_fetched
         except TypeError:
             return True
 
-        ttl = timedelta(hours=config.getint("warnings", "inmates_cache_ttl"))
+        ttl = datetime.timedelta(hours=config.getint("warnings", "inmates_cache_ttl"))
         return age > ttl
 
 

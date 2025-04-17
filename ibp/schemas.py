@@ -15,6 +15,13 @@ import pydantic
 from pydantic import BaseModel
 
 
+class Jurisdiction(str, enum.Enum):
+    """Enumeration of valid inmate jurisdictions."""
+
+    texas = "Texas"
+    federal = "Federal"
+
+
 class UnitBase(BaseModel):
     """:py:mod:`pydantic` base schema for :py:class:`ibp.models.Unit`."""
 
@@ -23,6 +30,24 @@ class UnitBase(BaseModel):
 
     url: pydantic.HttpUrl
     """Unit URL if available."""
+
+    street1: pydantic.constr(min_length=1)
+    """Street1 of the prison unit address."""
+
+    street2: pydantic.constr(min_length=1)
+    """Street2 of the prison unit address."""
+
+    city: pydantic.constr(min_length=1)
+    """City of the prison unit address."""
+
+    zipcode: pydantic.constr(min_length=5, max_length=12)
+    """Zipcode of the prison unit address."""
+
+    state: pydantic.constr(min_length=1)
+    """State of the prison unit address."""
+
+    jurisdiction: jurisdiction
+    """Jurisdiction of the prison unit."""
 
 
 class UnitCreate(UnitBase):
@@ -36,7 +61,7 @@ class Unit(UnitBase):
     """Read-only auto-incrementing unit index."""
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class LookupBase(BaseModel):
@@ -57,7 +82,7 @@ class Lookup(LookupBase):
     """Datetime of the volunteer lookup for an inmate."""
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class CommentBase(BaseModel):
@@ -84,7 +109,7 @@ class Comment(BaseModel):
     """Datetime of when the comment was made."""
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class RequestAction(str, enum.Enum):
@@ -111,7 +136,18 @@ class Request(RequestBase):
     """Read-only auto-incrementing request index."""
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+
+class RequestAddress(BaseModel):
+    """:py:mod:`pydantic` schema for a :py:class:`ibp.models.Request` address."""
+
+    name: inmate_name,
+    street1: unit.street1,
+    street2: unit.street2,
+    city: unit.city,
+    state: unit.state,
+    zipcode: unit.zipcode,
 
 
 class InmateBase(BaseModel):
@@ -139,7 +175,7 @@ class InmateBase(BaseModel):
 
     """
 
-    unit: Unit
+    unit: typing.Optional[Unit]
     """Prison unit holding the inmate."""
 
     sex: str
@@ -151,7 +187,7 @@ class InmateBase(BaseModel):
     url: typing.Optional[pydantic.HttpUrl]
     """Inmate URL where their information is web accessible."""
 
-    release: str
+    release: datetime.date | str
     """Date of when this inmate is set to be released."""
 
 
@@ -174,11 +210,18 @@ class Inmate(InmateBase):
     requests: list[Request]
     """List of requests made by this inmate."""
 
-    release_warning: str
-    """Warning if an inmate is to be released soon."""
+    # release_warning: str
+    # """Warning if an inmate is to be released soon."""
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+
+class InmateSearchResults(BaseModel):
+    """:py:mod:`pydantic` schema :py:class:`ibp.models.Inmate` search results."""
+
+    inmates: list[Inmate]
+    errors: list[pydantic.constr(min_length=1)]
 
 
 class ShipmentBase(BaseModel):
@@ -211,6 +254,6 @@ class Shipment(ShipmentBase):
     """Read-only auto-incrementing shipment index."""
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
