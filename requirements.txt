@@ -11,4 +11,4 @@ gunicorn
 google-api-python-client
 SQLAlchemy
 oauth2client
-git+https://github.com/jonkensta/inmate-providers@master#egg=pymates
+pymates @ git+https://github.com/jonkensta/inmate-providers@requests
