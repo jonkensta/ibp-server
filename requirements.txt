@@ -8,7 +8,5 @@ Flask-WTF
 Flask-Login
 Jinja2
 gunicorn
-google-api-python-client
 SQLAlchemy
-oauth2client
 pymates @ git+https://github.com/jonkensta/inmate-providers@curl
