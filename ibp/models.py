@@ -1,69 +1,42 @@
-import functools
+"""IBP sqlalchemy models."""
 
 from datetime import datetime, timedelta
 
+import pymates as providers
 import sqlalchemy
 import sqlalchemy.orm
-
-from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
-
-import pymates as providers
+from sqlalchemy.ext.declarative import declared_attr
 
 import ibp
 
-db = ibp.db
-session = ibp.db.session
+Model = ibp.db.Model
+Column = ibp.db.Column
+
+Text = ibp.db.Text
+Integer = ibp.db.Integer
+String = ibp.db.String
+DateTime = ibp.db.DateTime
+Date = ibp.db.Date
+Enum = ibp.db.Enum
+
+ForeignKey = ibp.db.ForeignKey
+UniqueConstraint = ibp.db.UniqueConstraint
+
+relationship = ibp.db.relationship
 
 
-class UniqueMixin(object):
-    @classmethod
-    def unique_filter(cls, *args, **kwargs):
-        raise NotImplementedError
+class ReleaseDate(String):  # pylint: disable=too-few-public-methods
+    """Custom column type for release date."""
 
-    @classmethod
-    def as_unique(cls, *args, **kwargs):
-        cache = getattr(session, "_unique_cache", None)
-        if cache is None:
-            session._unique_cache = cache = {}
+    def result_processor(self, *_):
+        """Create a release date result processor."""
 
-        key = (cls,) + args
-        if key in cache:
-            obj = cache[key]
-
-        else:
-            obj = cls.unique_filter(*args, **kwargs).first()
-            if obj is None:
-                obj = cls(*args, **kwargs)
-                session.add(obj)
-
-            cache[key] = obj
-
-        try:
-            session.add(obj)
-        except sqlalchemy.exc.InvalidRequestError:
-            pass
-
-        return obj
-
-
-@sqlalchemy.event.listens_for(sqlalchemy.orm.Session, "after_flush")
-def clear_unique_cache(session, ctx):
-    session._unique_cache = {}
-
-
-class ReleaseDate(db.String):
-    def __init__(self, date_format="%Y-%m-%d"):
-        super(ReleaseDate, self).__init__()
-        self.date_format = date_format
-
-    def result_processor(self, dialect, coltype):
         def process(value):
             if value is None:
                 return None
-            strptime = datetime.strptime
             try:
-                value = strptime(value, self.date_format).date()
+                value = datetime.strptime(value, "%Y-%m-%d").date()
             except ValueError:
                 pass
             return value
@@ -71,43 +44,46 @@ class ReleaseDate(db.String):
         return process
 
 
-class Inmate(db.Model, UniqueMixin):
+class Inmate(Model):  # pylint: disable=too-many-instance-attributes
+    """Inmate sqlalchemy model."""
+
     __tablename__ = "inmates"
 
-    autoid = db.Column(db.Integer, primary_key=True)
+    autoid = Column(Integer, primary_key=True)
 
-    first_name = db.Column(db.String)
-    last_name = db.Column(db.String)
+    first_name = Column(String)
+    last_name = Column(String)
 
-    jurisdiction = db.Column(
-        db.Enum("Texas", "Federal", name="jurisdiction_enum"), nullable=False
+    jurisdiction = Column(
+        Enum("Texas", "Federal", name="jurisdiction_enum"), nullable=False
     )
-    id = db.Column(db.Integer, nullable=False)
+    id = Column(Integer, nullable=False)
 
-    unit_id = db.Column(db.Integer, db.ForeignKey("units.autoid"))
-    unit = db.relationship("Unit", uselist=False, back_populates="inmates")
+    unit_id = Column(Integer, ForeignKey("units.autoid"))
+    unit = relationship("Unit", uselist=False, back_populates="inmates")
 
-    race = db.Column(db.String)
-    sex = db.Column(db.String)
-    release = db.Column(ReleaseDate)
-    url = db.Column(db.String)
+    race = Column(String)
+    sex = Column(String)
+    release = Column(ReleaseDate)
+    url = Column(String)
 
-    datetime_fetched = db.Column(db.DateTime)
-    date_last_lookup = db.Column(db.Date)
+    datetime_fetched = Column(DateTime)
+    date_last_lookup = Column(Date)
 
-    requests = db.relationship(
+    requests = relationship(
         "Request",
         back_populates="inmate",
         order_by="desc(Request.date_postmarked)",
     )
 
-    comments = db.relationship("Comment", order_by="desc(Comment.datetime)")
+    comments = relationship("Comment", order_by="desc(Comment.datetime)")
 
-    _lookups_association = db.relationship("Lookup", order_by="desc(Lookup.datetime)")
+    _lookups_association = relationship("Lookup", order_by="desc(Lookup.datetime)")
     lookups = association_proxy("_lookups_association", "datetime")
 
     @classmethod
-    def from_response(cls, response):
+    def from_response(cls, session, response):
+        """Create an Inmate instance from a provider response."""
         jurisdiction = response["jurisdiction"]
         id_ = int(response["id"].replace("-", ""))
         with session.no_autoflush:
@@ -116,7 +92,8 @@ class Inmate(db.Model, UniqueMixin):
         return inmate
 
     @classmethod
-    def query_by_autoid(cls, autoid):
+    def query_by_autoid(cls, session, autoid):
+        """Query the inmate providers by autoid."""
         inmate = cls.query.filter_by(autoid=autoid).first()
 
         if inmate is None or inmate.entry_is_fresh():
@@ -134,7 +111,8 @@ class Inmate(db.Model, UniqueMixin):
         return cls.query.filter_by(autoid=autoid)
 
     @classmethod
-    def query_by_inmate_id(cls, id_):
+    def query_by_inmate_id(cls, session, id_):
+        """Query the inmate providers by inmate id."""
         inmates, errors = providers.query_by_inmate_id(id_)
         inmates = map(Inmate.from_response, inmates)
 
@@ -145,7 +123,8 @@ class Inmate(db.Model, UniqueMixin):
         return inmates, errors
 
     @classmethod
-    def query_by_name(cls, first_name, last_name):
+    def query_by_name(cls, session, first_name, last_name):
+        """Query the inmate providers by name."""
         timeout = ibp.config.getfloat("providers", "timeout")
         inmates, errors = providers.query_by_name(
             first_name, last_name, timeout=timeout
@@ -161,20 +140,12 @@ class Inmate(db.Model, UniqueMixin):
         ).filter(Inmate.first_name.ilike(first_name + "%"))
         return inmates, errors
 
-    @classmethod
-    def unique_filter(cls, jurisdiction, id_):
-        return cls.query.filter_by(jurisdiction=jurisdiction, id=id_)
-
     @declared_attr
-    def __table_args__(cls):
-        return (db.UniqueConstraint("jurisdiction", "id"),)
-
-    def __init__(self, jurisdiction, id_, **kwargs):
-        kwargs["jurisdiction"] = jurisdiction
-        kwargs["id"] = id_
-        super(Inmate, self).__init__(**kwargs)
+    def __table_args__(cls):  # pylint: disable=no-self-argument
+        return (UniqueConstraint("jurisdiction", "id"),)
 
     def entry_is_fresh(self):
+        """Flag if an entry is fresh."""
         if self.datetime_fetched is None:
             return False
 
@@ -188,6 +159,7 @@ class Inmate(db.Model, UniqueMixin):
             self = Inmate.query_by_autoid(self.autoid).first()
 
     def update_from_response(self, **kwargs):
+        """Update an inmate instance from a provider response."""
         unit_name = kwargs.get("unit") or ""
         if self.unit is None or self.unit.name != unit_name:
             self.unit = Unit.query.filter_by(name=unit_name).first()
@@ -204,82 +176,76 @@ class Inmate(db.Model, UniqueMixin):
         self.date_last_lookup = kwargs.get("date_last_lookup")
 
 
-class Lookup(db.Model):
+class Lookup(Model):
     __tablename__ = "lookups"
 
-    autoid = db.Column(db.Integer, primary_key=True)
-    datetime = db.Column(db.DateTime, nullable=False)
-    inmate_id = db.Column(db.Integer, db.ForeignKey("inmates.autoid"))
-
-    def __init__(self, dt):
-        self.datetime = dt
-        self.done_by = None  # FIXME
-        super(Lookup, self).__init__()
+    autoid = Column(Integer, primary_key=True)
+    datetime = Column(DateTime, nullable=False)
+    inmate_id = Column(Integer, ForeignKey("inmates.autoid"))
 
 
-class Request(db.Model):
+class Request(Model):  # pylint: disable=too-few-public-methods
+    """Sqlalchemy model for IBP requests."""
+
     __tablename__ = "requests"
 
-    autoid = db.Column(db.Integer, primary_key=True)
+    autoid = Column(Integer, primary_key=True)
 
-    date_processed = db.Column(db.Date, nullable=False)
-    date_postmarked = db.Column(db.Date, nullable=False)
+    date_processed = Column(Date, nullable=False)
+    date_postmarked = Column(Date, nullable=False)
 
-    action = db.Column(db.Enum("Filled", "Tossed", name="action_enum"), nullable=False)
+    action = Column(Enum("Filled", "Tossed", name="action_enum"), nullable=False)
 
-    inmate_autoid = db.Column(db.Integer, db.ForeignKey("inmates.autoid"))
-    inmate = db.relationship("Inmate", uselist=False, back_populates="requests")
+    inmate_autoid = Column(Integer, ForeignKey("inmates.autoid"))
+    inmate = relationship("Inmate", uselist=False, back_populates="requests")
 
-    shipment_autoid = db.Column(db.Integer, db.ForeignKey("shipments.autoid"))
-    shipment = db.relationship("Shipment", uselist=False, back_populates="requests")
+    shipment_autoid = Column(Integer, ForeignKey("shipments.autoid"))
+    shipment = relationship("Shipment", uselist=False, back_populates="requests")
 
     @property
     def status(self):
+        """Return status of a request."""
         shipped = self.shipment and self.shipment.date_shipped and "Shipped"
         return shipped or self.action
 
-    def __init__(self, **kwargs):
-        super(Request, self).__init__(**kwargs)
 
+class Shipment(Model):  # pylint: disable=too-few-public-methods
+    """Sqlalchemy model for IBP shipments."""
 
-class Shipment(db.Model):
     __tablename__ = "shipments"
 
-    autoid = db.Column(db.Integer, primary_key=True)
+    autoid = Column(Integer, primary_key=True)
 
-    date_shipped = db.Column(db.Date, nullable=False)
+    date_shipped = Column(Date, nullable=False)
 
-    tracking_url = db.Column(db.String)
-    tracking_code = db.Column(db.String)
+    tracking_url = Column(String)
+    tracking_code = Column(String)
 
-    weight = db.Column(db.Integer, nullable=False)
-    postage = db.Column(db.Integer, nullable=False)  # postage in cents
+    weight = Column(Integer, nullable=False)
+    postage = Column(Integer, nullable=False)  # postage in cents
 
-    requests = db.relationship("Request", back_populates="shipment")
+    requests = relationship("Request", back_populates="shipment")
 
-    unit_id = db.Column(db.Integer, db.ForeignKey("units.autoid"))
-    unit = db.relationship("Unit", uselist=False, back_populates="shipments")
-
-    def __init__(self, **kwargs):
-        super(Shipment, self).__init__(**kwargs)
+    unit_id = Column(Integer, ForeignKey("units.autoid"))
+    unit = relationship("Unit", uselist=False, back_populates="shipments")
 
 
-class Comment(db.Model):
+class Comment(Model):  # pylint: disable=too-few-public-methods
+    """Sqlalchemy model for IBP comments."""
+
     __tablename__ = "comments"
 
-    autoid = db.Column(db.Integer, primary_key=True)
+    autoid = Column(Integer, primary_key=True)
 
-    datetime = db.Column(db.DateTime, nullable=False)
-    author = db.Column(db.String, nullable=False)
-    body = db.Column(db.Text, nullable=False)
+    datetime = Column(DateTime, nullable=False)
+    author = Column(String, nullable=False)
+    body = Column(Text, nullable=False)
 
-    inmate_id = db.Column(db.Integer, db.ForeignKey("inmates.autoid"))
-
-    def __init__(self, **kwargs):
-        super(Comment, self).__init__(**kwargs)
+    inmate_id = Column(Integer, ForeignKey("inmates.autoid"))
 
     @classmethod
     def from_form(cls, form):
+        """Update comment instance from a form."""
         return cls(
             datetime=datetime.today(),
             author=form.author.data,
@@ -287,37 +253,35 @@ class Comment(db.Model):
         )
 
 
-class Unit(db.Model):
+class Unit(Model):
     __tablename__ = "units"
 
-    autoid = db.Column(db.Integer, primary_key=True)
+    autoid = Column(Integer, primary_key=True)
 
-    name = db.Column(db.String, nullable=False)
-    street1 = db.Column(db.String, nullable=False)
-    street2 = db.Column(db.String)
+    name = Column(String, nullable=False)
+    street1 = Column(String, nullable=False)
+    street2 = Column(String)
 
-    city = db.Column(db.String, nullable=False)
-    zipcode = db.Column(db.String(12), nullable=False)
-    state = db.Column(db.String(3), nullable=False)
+    city = Column(String, nullable=False)
+    zipcode = Column(String(12), nullable=False)
+    state = Column(String(3), nullable=False)
 
-    url = db.Column(db.String)
-    jurisdiction = db.Column(
-        db.Enum("Texas", "Federal", name="jurisdiction_enum"), nullable=False
+    url = Column(String)
+    jurisdiction = Column(
+        Enum("Texas", "Federal", name="jurisdiction_enum"), nullable=False
     )
 
-    shipping_method = db.Column(db.Enum("Box", "Individual", name="shipping_enum"))
+    shipping_method = Column(Enum("Box", "Individual", name="shipping_enum"))
 
-    inmates = db.relationship("Inmate", back_populates="unit")
-    shipments = db.relationship("Shipment", back_populates="unit")
-
-    def __init__(self, **kwargs):
-        super(Unit, self).__init__(**kwargs)
+    inmates = ibp.db.relationship("Inmate", back_populates="unit")
+    shipments = ibp.db.relationship("Shipment", back_populates="unit")
 
     @declared_attr
-    def __table_args__(cls):
-        return (db.UniqueConstraint("jurisdiction", "name"),)
+    def __table_args__(cls):  # pylint: disable=no-self-argument
+        return (UniqueConstraint("jurisdiction", "name"),)
 
     def update_from_form(self, form):
+        """Update a unit instance from a form."""
         self.name = form.name.data
         self.url = form.url.data or None
         self.city = form.city.data
