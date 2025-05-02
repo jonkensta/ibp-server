@@ -131,10 +131,10 @@ class Inmate(Base):
 
     # Primary key.
 
-    jurisdiction = Column(Jurisdiction, primary_key=True)
+    jurisdiction = Column(Jurisdiction, primary_key=True, nullable=False)
     """Prison system holding the inmate."""
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, nullable=False)
     """Inmate's numeric identifier as used in their jurisdiction."""
 
     # Person-specific data.
