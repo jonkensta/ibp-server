@@ -30,7 +30,6 @@ from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base  # type: ignore
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship  # type: ignore
-from sqlalchemy.processors import str_to_date  # type: ignore
 from sqlalchemy.schema import ForeignKeyConstraint  # type: ignore
 
 from .base import config
@@ -101,8 +100,8 @@ class ReleaseDate(String):
 
         def process(value):
             try:
-                return str_to_date(value)
-            except ValueError:
+                return datetime.strptime(value, "%Y-%m-%d").date()
+            except (ValueError, TypeError):
                 return process_string(value)
 
         return process
