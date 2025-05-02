@@ -16,7 +16,7 @@ instantiate anything.
 
 # pylint: disable=invalid-name, too-few-public-methods
 
-from marshmallow import Schema, fields, validate  # type: ignore
+from marshmallow import EXCLUDE, Schema, fields, validate  # type: ignore
 
 from . import warnings
 
@@ -148,16 +148,16 @@ class ShipmentSchema(Schema):
     """Postage of the shipment in US cents."""
 
 
-request = RequestSchema(unknown="EXCLUDE")
+request = RequestSchema(unknown=EXCLUDE)
 """Schema object for marshalling single :py:class:`ibp.models.Request` objects."""
 
-comment = CommentSchema(unknown="EXCLUDE")
+comment = CommentSchema(unknown=EXCLUDE)
 """Schema object for marshalling single :py:class:`ibp.models.Comment` objects."""
 
 inmate = InmateSchema()
 """Schema object for marshalling single :py:class:`ibp.models.Inmate` objects."""
 
-shipment = ShipmentSchema(unknown="EXCLUDE")
+shipment = ShipmentSchema(unknown=EXCLUDE)
 """Schema object for marshalling single :py:class:`ibp.models.Shipment` objects."""
 
 units = UnitSchema(many=True, only=["id", "name"])
