@@ -58,11 +58,9 @@ Base.metadata.naming_convention = {
 def update_from_kwargs(self, **kwargs):
     """Update a model object from given keyword arguments."""
     for key, value in kwargs.items():
-        if hasattr(self, key):
-            setattr(self, key, value)
-        else:
-            msg = f"'{self.__class__}' has no attribute named '{key}'"
-            raise AttributeError(msg)
+        if not hasattr(self, key):
+            raise AttributeError(f"{type(self).__name__} has no attribute '{key}'")
+        setattr(self, key, value)
 
 
 # Add update_from_kwargs method to Base to provide to all model objects.
