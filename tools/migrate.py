@@ -1,58 +1,66 @@
-import os
+"""Script to import data from the IBP database."""
+
 import argparse
-from datetime import datetime
+import datetime
+import os
+import sqlite3
+import sys
+import typing
 from contextlib import closing, contextmanager
 
-import sqlite3
 import sqlalchemy
 from progressbar import ProgressBar
 
 local_dir = os.path.dirname(os.path.realpath(__file__))  # noqa
-os.sys.path.append(os.path.join(local_dir, os.path.pardir))  # noqa
+sys.path.append(os.path.join(local_dir, os.path.pardir))  # noqa
 
-import ibp
-
-
-def parse_date(date):
-    return datetime.strptime(date, "%Y-%m-%d").date()
+import ibp  # pylint: disable=import-error, wrong-import-position
 
 
-def parse_date_or_None(date):
-    return (date is not None) and parse_date(date) or None
+def parse_date(date: str) -> datetime.date:
+    """Parse a date string."""
+    return datetime.datetime.strptime(date, "%Y-%m-%d").date()
 
 
-def parse_datetime(dt):
-    return datetime.strptime(dt, "%Y-%m-%d %H:%M:%S.%f")
+def parse_date_or_none(date: str | None) -> datetime.date | None:
+    """Parse a date string if not none."""
+    return parse_date(date) if date is not None else None
 
 
-def parse_datetime_or_None(dt):
-    return (dt is not None) and parse_datetime(dt) or None
+def parse_datetime(dt: str) -> datetime.datetime:
+    """Parse a datetime string."""
+    return datetime.datetime.strptime(dt, "%Y-%m-%d %H:%M:%S.%f")
 
 
-def dict_factory(cursor, row):
+def parse_datetime_or_none(dt: str | None) -> datetime.datetime | None:
+    """Parse a datetime if not none."""
+    return parse_datetime(dt) if dt is not None else None
+
+
+def dict_factory(cursor, row) -> dict:
+    """Row factory for returning a dictionary."""
     d = {}
     for idx, col in enumerate(cursor.description):
         d[col[0]] = row[idx]
     return d
 
 
-def units_length(connection):
+def units_length(connection) -> int:
+    """Return length of units table."""
     sql = "SELECT COUNT(*) FROM units"
-    return list(connection.execute(sql).fetchone().values())[0]
+    return connection.execute(sql).fetchone()["COUNT(*)"]
 
 
-def generate_units(connection):
-    sql = """
-        SELECT autoid, name, jurisdiction, url, shipping_method,
-               street1, street2, city, zipcode, state
-        FROM units
-    """
+def generate_units(connection) -> typing.Iterable[dict]:
+    """Generate all units from units table."""
+    sql = "SELECT * FROM units"
     for unit in connection.execute(sql):
         unit["id"] = unit.pop("autoid")
-        yield ibp.models.Unit(**unit)
+        yield unit
 
 
-def generate_comments(connection, inmate_autoid):
+def generate_comments(connection, inmate_autoid) -> typing.Iterable[dict]:
+    """Generate comments from the comments table."""
     sql = f"""
         SELECT * FROM comments
         WHERE inmate_id = {inmate_autoid}
@@ -66,60 +74,64 @@ def generate_comments(connection, inmate_autoid):
         comment["index"] = index
         comment["datetime"] = parse_datetime(comment["datetime"])
 
-        yield ibp.models.Comment(**comment)
+        yield comment
 
 
-def shipments_length(connection):
+def shipments_length(connection) -> int:
+    """Get the length of the shipments table."""
     sql = "SELECT COUNT(*) FROM shipments"
-    return list(connection.execute(sql).fetchone().values())[0]
+    return connection.execute(sql).fetchone()["COUNT(*)"]
 
 
-def generate_shipments(connection):
+def generate_shipments(connection) -> typing.Iterable[dict]:
+    """Generate shipments from the shipments table."""
     shipments = connection.execute("SELECT * FROM shipments")
     for shipment in shipments:
         shipment["id"] = shipment.pop("autoid")
         shipment["date_shipped"] = parse_date(shipment["date_shipped"])
-        yield ibp.models.Shipment(**shipment)
+        yield shipment
 
 
-def generate_requests(connection, inmate_autoid):
+def generate_requests(connection, inmate_autoid) -> typing.Iterable[dict]:
+    """Generate requests from the requests table."""
     sql = f"""
         SELECT * FROM requests
         WHERE inmate_autoid = {inmate_autoid}
         ORDER BY date_postmarked ASC
     """
-
     requests = connection.execute(sql)
 
     for index, request in enumerate(requests):
         request.pop("inmate_autoid")
-        request.pop("autoid")
-
+        request["id"] = request.pop("autoid")
         request["index"] = index
         request["date_processed"] = parse_date(request["date_processed"])
         request["date_postmarked"] = parse_date(request["date_postmarked"])
         request["shipment_id"] = request.pop("shipment_autoid")
+        yield request
 
-        yield ibp.models.Request(**request)
 
-
-def inmates_length(connection):
+def inmates_length(connection) -> int:
+    """Get the length of the inmates table."""
     sql = "SELECT COUNT(*) FROM inmates"
-    return list(connection.execute(sql).fetchone().values())[0]
+    return connection.execute(sql).fetchone()["COUNT(*)"]
 
 
-def generate_inmates(connection):
-    inmates_sql = "SELECT autoid, id, jurisdiction FROM inmates"
+def generate_inmates(connection) -> typing.Iterable[dict]:
+    """Generate inmates from the inmates table."""
+    inmates_sql = "SELECT * FROM inmates"
     for inmate in connection.execute(inmates_sql):
         autoid = inmate.pop("autoid")
-        inmate = ibp.models.Inmate(**inmate)
-        inmate.comments = list(generate_comments(connection, autoid))
-        inmate.requests = list(generate_requests(connection, autoid))
+        inmate.pop("date_last_lookup")
+        inmate["datetime_fetched"] = parse_datetime_or_none(inmate["datetime_fetched"])
+        inmate["comments"] = list(generate_comments(connection, autoid))
+        inmate["requests"] = list(generate_requests(connection, autoid))
         yield inmate
 
 
 @contextmanager
 def build_session():
+    """Build a sqlalchemy session."""
     try:
         session = ibp.db.Session()
         yield session
@@ -131,6 +143,7 @@ def build_session():
 
 
 def create_db():
+    """Create the sqlalchemy database."""
     session = ibp.db.Session()
     engine = session.get_bind()
     ibp.models.Base.metadata.create_all(engine)
@@ -154,6 +167,7 @@ def main():
         units = progress(units)
 
         with build_session() as session:
+            units = (ibp.models.Unit(**unit) for unit in units)
             session.add_all(units)
             session.commit()
 
@@ -163,6 +177,7 @@ def main():
         shipments = progress(shipments)
 
         with build_session() as session:
+            shipments = (ibp.models.Shipment(**shipment) for shipment in shipments)
             session.add_all(shipments)
             session.commit()
 
@@ -172,6 +187,17 @@ def main():
         inmates = progress(inmates)
 
         with build_session() as session:
+
+            def process_inmate(inmate: dict) -> ibp.models.Inmate:
+                requests = [
+                    ibp.models.Request(**request) for request in inmate.pop("requests")
+                ]
+                comments = [
+                    ibp.models.Comment(**comment) for comment in inmate.pop("comments")
+                ]
+                return ibp.models.Inmate(**inmate, requests=requests, comments=comments)
+
+            inmates = map(process_inmate, inmates)
             session.add_all(inmates)
             session.commit()
 
