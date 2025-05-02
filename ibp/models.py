@@ -31,6 +31,7 @@ from sqlalchemy.ext.declarative import declarative_base  # type: ignore
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship  # type: ignore
 from sqlalchemy.schema import ForeignKeyConstraint  # type: ignore
+from sqlalchemy.schema import UniqueConstraint
 
 from .base import config
 
@@ -247,6 +248,7 @@ class HasInmateIndexKey:
                 ["inmate_jurisdiction", "inmate_id"],
                 ["inmates.jurisdiction", "inmates.id"],
             ),
+            UniqueConstraint("inmate_jurisdiction", "inmate_id", "index"),
         )
 
     @declared_attr
