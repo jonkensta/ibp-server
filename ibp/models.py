@@ -241,7 +241,7 @@ class HasInmateIndexKey:
 
     """
 
-    # pylint: disable=no-self-argument, no-self-use
+    # pylint: disable=no-self-argument
 
     @declared_attr
     def __table_args__(cls):
