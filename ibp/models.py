@@ -213,6 +213,9 @@ class Inmate(Base):
         ttl = timedelta(hours=config.getint("warnings", "inmates_cache_ttl"))
         return age > ttl
 
+    def __repr__(self):
+        return f"<Inmate {self.jurisdiction} #{self.id:08d}>"
+
 
 class HasInmateIndexKey:
     """Mix-In for injecting an Inmate + index key.
@@ -447,3 +450,6 @@ class Unit(Base):
 
     shipments = relationship("Shipment", back_populates="unit")
     """List of shipments made to this prison unit."""
+
+    def __repr__(self):
+        return f"<Unit {self.name}>"
