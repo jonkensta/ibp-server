@@ -1,50 +1,49 @@
 """IBP sqlalchemy models."""
 
-from datetime import datetime, timedelta
+import datetime
 
 import pymates as providers
 import sqlalchemy
 import sqlalchemy.orm
+import sqlalchemy.types
+from sqlalchemy import Enum  # type: ignore
+from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import relationship
+from sqlalchemy.schema import ForeignKeyConstraint, UniqueConstraint
 
-import ibp
-
-Model = ibp.db.Model
-Column = ibp.db.Column
-
-Text = ibp.db.Text
-Integer = ibp.db.Integer
-String = ibp.db.String
-DateTime = ibp.db.DateTime
-Date = ibp.db.Date
-Enum = ibp.db.Enum
-
-ForeignKey = ibp.db.ForeignKey
-UniqueConstraint = ibp.db.UniqueConstraint
-
-relationship = ibp.db.relationship
+from .base import config, db
 
 
-class ReleaseDate(String):  # pylint: disable=too-few-public-methods
-    """Custom column type for release date."""
+class ReleaseDate(sqlalchemy.types.TypeDecorator):
+    """Inmate release date SQLAlchemy column type."""
 
-    def result_processor(self, *_):
-        """Create a release date result processor."""
+    impl = sqlalchemy.types.String
+    python_type = str
 
-        def process(value):
-            if value is None:
-                return None
-            try:
-                value = datetime.strptime(value, "%Y-%m-%d").date()
-            except ValueError:
-                pass
+    cache_ok = True
+
+    def process_bind_param(self, value, _):
+        try:
+            return value.isoformat()
+        except AttributeError:
+            return str(value)
+
+    def process_literal_param(self, value, _):
+        try:
+            return value.isoformat()
+        except AttributeError:
+            return str(value)
+
+    def process_result_value(self, value, _):
+        try:
+            return datetime.date.fromisoformat(value)
+        except ValueError:
             return value
 
-        return process
 
-
-class Inmate(Model):  # pylint: disable=too-many-instance-attributes
+class Inmate(db.Model):  # pylint: disable=too-many-instance-attributes
     """Inmate sqlalchemy model."""
 
     __tablename__ = "inmates"
@@ -89,56 +88,85 @@ class Inmate(Model):  # pylint: disable=too-many-instance-attributes
         kwargs["unit"] = session.query(Unit).filter_by(name=kwargs["unit"]).first()
         return cls(**kwargs)
 
+    def update_from_response(self, session, response):
+        """Update an Inmate instance from a provider response."""
+        unit_name = response.get("unit")
+        if unit_name is not None and (self.unit is None or self.unit.name != unit_name):
+            self.unit = session.query(Unit).filter_by(name=unit_name).first()
+
+        self.first_name = response.get("first_name", self.first_name)
+        self.last_name = response.get("last_name", self.last_name)
+
+        self.sex = response.get("sex", self.sex)
+        self.url = response.get("url", self.url)
+        self.race = response.get("race", self.race)
+        self.release = response.get("release", self.release)
+
+        self.datetime_fetched = response.get("datetime_fetched", self.datetime_fetched)
+        self.date_last_lookup = response.get("date_last_lookup", self.date_last_lookup)
+
+    @classmethod
+    def add_responses(cls, session, responses):
+        """Add responses to database."""
+        with session.begin_nested():
+            for response in responses:
+                jurisdiction = response["jurisdiction"]
+                id_ = response["id"]
+
+                query = (
+                    session.query(Inmate)
+                    .filter_by(jurisdiction=jurisdiction, id=id_)
+                    .first()
+                )
+
+                if query is not None:
+                    inmate = query
+                    inmate.update_from_response(session, response)
+                else:
+                    inmate = cls.from_response(session, response)
+
+                session.add(inmate)
+
     @classmethod
     def query_by_autoid(cls, session, autoid):
         """Query the inmate providers by autoid."""
-        inmate = cls.query.filter_by(autoid=autoid).first()
+        inmate = session.query(cls).filter_by(autoid=autoid).first()
 
         if inmate is None or inmate.entry_is_fresh():
-            return cls.query.filter_by(autoid=autoid)
+            return session.query(cls).filter_by(autoid=autoid)
 
-        timeout = ibp.config.getfloat("providers", "timeout")
-        inmates, _ = providers.query_by_inmate_id(
+        timeout = config.getfloat("providers", "timeout")
+        responses, _ = providers.query_by_inmate_id(
             inmate.id, jurisdictions=[inmate.jurisdiction], timeout=timeout
         )
 
-        with session.begin_nested():
-            for inmate in inmates:
-                inmate = cls.from_response(session, inmate)
-                session.merge(inmate)
-
-        return cls.query.filter_by(autoid=autoid)
+        cls.add_responses(session, responses)
+        return session.query(cls).filter_by(autoid=autoid)
 
     @classmethod
     def query_by_inmate_id(cls, session, id_):
         """Query the inmate providers by inmate id."""
-        inmates, errors = providers.query_by_inmate_id(id_)
-
-        with session.begin_nested():
-            for inmate in inmates:
-                inmate = cls.from_response(session, inmate)
-                session.merge(inmate)
-
-        inmates = cls.query.filter_by(id=id_)
+        responses, errors = providers.query_by_inmate_id(id_)
+        cls.add_responses(session, responses)
+        inmates = session.query(cls).filter_by(id=id_)
         return inmates, errors
 
     @classmethod
     def query_by_name(cls, session, first_name, last_name):
         """Query the inmate providers by name."""
-        timeout = ibp.config.getfloat("providers", "timeout")
-        inmates, errors = providers.query_by_name(
+        timeout = config.getfloat("providers", "timeout")
+        responses, errors = providers.query_by_name(
             first_name, last_name, timeout=timeout
         )
 
-        with session.begin_nested():
-            for inmate in inmates:
-                inmate = cls.from_response(session, inmate)
-                session.merge(inmate)
+        cls.add_responses(session, responses)
 
         sql_lower = sqlalchemy.func.lower
-        inmates = cls.query.filter(
-            sql_lower(Inmate.last_name) == sql_lower(last_name)
-        ).filter(Inmate.first_name.ilike(first_name + "%"))
+        inmates = (
+            session.query(cls)
+            .filter(sql_lower(Inmate.last_name) == sql_lower(last_name))
+            .filter(Inmate.first_name.ilike(first_name + "%"))
+        )
         return inmates, errors
 
     @declared_attr
@@ -150,23 +178,28 @@ class Inmate(Model):  # pylint: disable=too-many-instance-attributes
         if self.datetime_fetched is None:
             return False
 
-        age = datetime.now() - self.datetime_fetched
-        ttl_hours = ibp.config.getint("warnings", "inmates_cache_ttl")
-        ttl = timedelta(hours=ttl_hours)
+        age = datetime.datetime.now() - self.datetime_fetched
+        ttl_hours = config.getint("warnings", "inmates_cache_ttl")
+        ttl = datetime.timedelta(hours=ttl_hours)
         return age < ttl
 
 
-class Lookup(Model):  # pylint: disable=too-few-public-methods
+class Lookup(db.Model):  # pylint: disable=too-few-public-methods
     """Sqlalchemy for IBP lookups."""
 
     __tablename__ = "lookups"
 
     autoid = Column(Integer, primary_key=True)
     datetime = Column(DateTime, nullable=False)
+
     inmate_id = Column(Integer, ForeignKey("inmates.autoid"))
 
+    def __init__(self, dt):
+        super().__init__()
+        self.datetime = dt
 
-class Request(Model):  # pylint: disable=too-few-public-methods
+
+class Request(db.Model):  # pylint: disable=too-few-public-methods
     """Sqlalchemy model for IBP requests."""
 
     __tablename__ = "requests"
@@ -191,7 +224,7 @@ class Request(Model):  # pylint: disable=too-few-public-methods
         return shipped or self.action
 
 
-class Shipment(Model):  # pylint: disable=too-few-public-methods
+class Shipment(db.Model):  # pylint: disable=too-few-public-methods
     """Sqlalchemy model for IBP shipments."""
 
     __tablename__ = "shipments"
@@ -212,7 +245,7 @@ class Shipment(Model):  # pylint: disable=too-few-public-methods
     unit = relationship("Unit", uselist=False, back_populates="shipments")
 
 
-class Comment(Model):  # pylint: disable=too-few-public-methods
+class Comment(db.Model):  # pylint: disable=too-few-public-methods
     """Sqlalchemy model for IBP comments."""
 
     __tablename__ = "comments"
@@ -229,13 +262,13 @@ class Comment(Model):  # pylint: disable=too-few-public-methods
     def from_form(cls, form):
         """Update comment instance from a form."""
         return cls(
-            datetime=datetime.today(),
+            datetime=datetime.datetime.today(),
             author=form.author.data,
             body=form.comment.data,
         )
 
 
-class Unit(Model):
+class Unit(db.Model):  # pylint: disable=too-many-instance-attributes
     """Sqlalchemy model for IBP units."""
 
     __tablename__ = "units"
@@ -257,8 +290,8 @@ class Unit(Model):
 
     shipping_method = Column(Enum("Box", "Individual", name="shipping_enum"))
 
-    inmates = ibp.db.relationship("Inmate", back_populates="unit")
-    shipments = ibp.db.relationship("Shipment", back_populates="unit")
+    inmates = relationship("Inmate", back_populates="unit")
+    shipments = relationship("Shipment", back_populates="unit")
 
     @declared_attr
     def __table_args__(cls):  # pylint: disable=no-self-argument
