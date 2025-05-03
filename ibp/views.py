@@ -15,7 +15,6 @@ from flask import (
 
 from . import flask_forms, models, warnings
 from .base import app, config, csrf, db, log_handlers, log_stream
-
 from .query import inmates_by_autoid as query_inmates_by_autoid
 from .query import inmates_by_inmate_id as query_inmates_by_inmate_id
 from .query import inmates_by_name as query_inmates_by_name
@@ -350,9 +349,9 @@ def request_address(autoid):
     if unit is None:
         return "inmate is not assigned to a unit", 400
 
-    inmate_name = (
-        f"{inmate.first_name.title()} {inmate.last_name.title} #{inmate.id:08d}"
-    )
+    first_name = inmate.first_name.title()
+    last_name = inmate.last_name.title()
+    inmate_name = f"{first_name} {last_name} #{inmate.id:08d}"
 
     return jsonify(
         {
