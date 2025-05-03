@@ -2,7 +2,6 @@
 
 import datetime
 
-import pymates as providers
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.types
@@ -79,95 +78,6 @@ class Inmate(db.Model):  # pylint: disable=too-many-instance-attributes
 
     _lookups_association = relationship("Lookup", order_by="desc(Lookup.datetime)")
     lookups = association_proxy("_lookups_association", "datetime")
-
-    @classmethod
-    def from_response(cls, session, response):
-        """Create an Inmate instance from a provider response."""
-        kwargs = dict(response)
-        kwargs["id"] = int(kwargs["id"].replace("-", ""))
-        kwargs["unit"] = session.query(Unit).filter_by(name=kwargs["unit"]).first()
-        return cls(**kwargs)
-
-    def update_from_response(self, session, response):
-        """Update an Inmate instance from a provider response."""
-        unit_name = response.get("unit")
-        if unit_name is not None and (self.unit is None or self.unit.name != unit_name):
-            self.unit = session.query(Unit).filter_by(name=unit_name).first()
-
-        self.first_name = response.get("first_name", self.first_name)
-        self.last_name = response.get("last_name", self.last_name)
-
-        self.sex = response.get("sex", self.sex)
-        self.url = response.get("url", self.url)
-        self.race = response.get("race", self.race)
-        self.release = response.get("release", self.release)
-
-        self.datetime_fetched = response.get("datetime_fetched", self.datetime_fetched)
-        self.date_last_lookup = response.get("date_last_lookup", self.date_last_lookup)
-
-    @classmethod
-    def add_responses(cls, session, responses):
-        """Add responses to database."""
-        with session.begin_nested():
-            for response in responses:
-                jurisdiction = response["jurisdiction"]
-                id_ = response["id"]
-
-                query = (
-                    session.query(Inmate)
-                    .filter_by(jurisdiction=jurisdiction, id=id_)
-                    .first()
-                )
-
-                if query is not None:
-                    inmate = query
-                    inmate.update_from_response(session, response)
-                else:
-                    inmate = cls.from_response(session, response)
-
-                session.add(inmate)
-
-    @classmethod
-    def query_by_autoid(cls, session, autoid):
-        """Query the inmate providers by autoid."""
-        inmate = session.query(cls).filter_by(autoid=autoid).first()
-
-        if inmate is None or inmate.entry_is_fresh():
-            return session.query(cls).filter_by(autoid=autoid)
-
-        timeout = config.getfloat("providers", "timeout")
-        responses, _ = providers.query_by_inmate_id(
-            inmate.id, jurisdictions=[inmate.jurisdiction], timeout=timeout
-        )
-
-        cls.add_responses(session, responses)
-        return session.query(cls).filter_by(autoid=autoid)
-
-    @classmethod
-    def query_by_inmate_id(cls, session, id_):
-        """Query the inmate providers by inmate id."""
-        responses, errors = providers.query_by_inmate_id(id_)
-        cls.add_responses(session, responses)
-        inmates = session.query(cls).filter_by(id=id_)
-        return inmates, errors
-
-    @classmethod
-    def query_by_name(cls, session, first_name, last_name):
-        """Query the inmate providers by name."""
-        timeout = config.getfloat("providers", "timeout")
-        responses, errors = providers.query_by_name(
-            first_name, last_name, timeout=timeout
-        )
-
-        cls.add_responses(session, responses)
-
-        sql_lower = sqlalchemy.func.lower
-        inmates = (
-            session.query(cls)
-            .filter(sql_lower(Inmate.last_name) == sql_lower(last_name))
-            .filter(Inmate.first_name.ilike(first_name + "%"))
-        )
-        return inmates, errors
 
     @declared_attr
     def __table_args__(cls):  # pylint: disable=no-self-argument

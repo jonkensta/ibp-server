@@ -16,6 +16,10 @@ from flask import (
 from . import flask_forms, models, warnings
 from .base import app, config, csrf, db, log_handlers, log_stream
 
+from .query import inmates_by_autoid as query_inmates_by_autoid
+from .query import inmates_by_inmate_id as query_inmates_by_inmate_id
+from .query import inmates_by_name as query_inmates_by_name
+
 
 def appkey_required(view_function):
     """Require an appkey for a given view."""
@@ -64,10 +68,10 @@ def search_inmates():
         if first and last:
             first = form.first_name.data
             last = form.last_name.data
-            inmates, errors = models.Inmate.query_by_name(db.session, first, last)
+            inmates, errors = query_inmates_by_name(db.session, first, last)
         else:
             id_ = form.id_.data
-            inmates, errors = models.Inmate.query_by_inmate_id(db.session, id_)
+            inmates, errors = query_inmates_by_inmate_id(db.session, id_)
 
     else:
         return render_template("search_inmates.html", form=form)
@@ -97,7 +101,7 @@ def search_inmates():
 @app.route("/view_inmate/<int:autoid>")
 def view_inmate(autoid):
     """Load the page for a single inmate."""
-    inmate = models.Inmate.query_by_autoid(db.session, autoid).first_or_404()
+    inmate = query_inmates_by_autoid(db.session, autoid).first_or_404()
     app.logger.debug(
         "loading view_inmate for %s inmate #%08d", inmate.jurisdiction, inmate.id
     )
@@ -106,7 +110,7 @@ def view_inmate(autoid):
         del inmate.lookups[2:]
         inmate.lookups.append(datetime.datetime.now())
 
-    inmate = models.Inmate.query_by_autoid(db.session, autoid).one()
+    inmate = query_inmates_by_autoid(db.session, autoid).one()
     postmarkdate = flask.session.get("postmarkdate")
     comment_form = flask_forms.Comment()
 
@@ -122,7 +126,7 @@ def view_inmate(autoid):
 @app.route("/add_request/<int:inmate_autoid>", methods=["POST"])
 def add_request(inmate_autoid):
     """Add a request for a specific inmate."""
-    inmate = models.Inmate.query_by_autoid(db.session, inmate_autoid).first_or_404()
+    inmate = query_inmates_by_autoid(db.session, inmate_autoid).first_or_404()
 
     date_str = flask.request.form.get("postmarkdate", "")
     try:
@@ -161,7 +165,7 @@ def add_request(inmate_autoid):
 @app.route("/request_warnings/<int:autoid>", methods=["POST"])
 def request_warnings(autoid):
     """Return request warnings."""
-    inmate = models.Inmate.query_by_autoid(db.session, autoid).first_or_404()
+    inmate = query_inmates_by_autoid(db.session, autoid).first_or_404()
 
     date_str = flask.request.form.get("postmarkdate", "")
     try:
@@ -255,7 +259,7 @@ def delete_request(autoid):
 @app.route("/add_comment/<int:inmate_autoid>", methods=["POST"])
 def add_comment(inmate_autoid):
     """Create a comment."""
-    inmate = models.Inmate.query_by_autoid(db.session, inmate_autoid).first_or_404()
+    inmate = query_inmates_by_autoid(db.session, inmate_autoid).first_or_404()
     form = flask_forms.Comment()
 
     if form.validate():
@@ -337,7 +341,7 @@ def request_address(autoid):
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
 
     inmate_autoid = request.inmate.autoid
-    inmate = models.Inmate.query_by_autoid(db.session, inmate_autoid).first()
+    inmate = query_inmates_by_autoid(db.session, inmate_autoid).first()
 
     if inmate is None:
         return "inmate is no longer in the system", 400
@@ -403,7 +407,7 @@ def request_destination(autoid):
     request = db.session.query(models.Request).filter_by(autoid=autoid).first_or_404()
 
     inmate_autoid = request.inmate.autoid
-    inmate = models.Inmate.query_by_autoid(db.session, inmate_autoid).first()
+    inmate = query_inmates_by_autoid(db.session, inmate_autoid).first()
 
     if inmate is None:
         return "inmate is no longer in the system.", 400
@@ -450,7 +454,7 @@ def ship_requests():
 
     for request in requests:
         inmate_autoid = request.inmate.autoid
-        inmate = models.Inmate.query_by_autoid(db.session, inmate_autoid).first()
+        inmate = query_inmates_by_autoid(db.session, inmate_autoid).first()
 
         if inmate is None:
             msg = f"inmate for request {request.autoid} is no longer in the system"
