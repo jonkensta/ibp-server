@@ -1,7 +1,6 @@
 """Initialize the IBP flask application."""
 
 import configparser
-import functools
 import logging
 import os
 import urllib
@@ -9,11 +8,10 @@ from datetime import timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-import flask
 from flask import Flask
-from flask_bootstrap import Bootstrap  # type: ignore
-from flask_sqlalchemy import SQLAlchemy  # type: ignore
-from flask_wtf.csrf import CSRFProtect  # type: ignore
+from flask_bootstrap import Bootstrap
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import MetaData
 from sqlalchemy.orm import DeclarativeBase
 
@@ -39,6 +37,7 @@ app = Flask(__name__)
 
 
 def get_database_uri():
+    """Get URI of sqlite3 database."""
     toplevel = get_toplevel_path()
     filepath = toplevel.joinpath(config.get("database", "database")).absolute()
     uri_parts = ("sqlite", "/", str(filepath), "", "", "")  # netloc needs to be "/".
@@ -57,7 +56,9 @@ Bootstrap(app)
 csrf = CSRFProtect(app)
 
 
-class Base(DeclarativeBase):
+class Base(DeclarativeBase):  # pylint: disable=too-few-public-methods
+    """Base for SQLAlchemy models."""
+
     metadata = MetaData(
         naming_convention={
             "ix": "ix_%(column_0_label)s",
@@ -118,20 +119,20 @@ def build_log_handlers():
     format_ = config.get("logging", "format", raw=True)
     formatter = logging.Formatter(format_)
 
-    handler = RotatingFileHandler(
+    handler_ = RotatingFileHandler(
         config.get("logging", "logfile"),
         maxBytes=config.getint("logging", "rotation_size"),
     )
-    handler.setFormatter(formatter)
-    yield handler
+    handler_.setFormatter(formatter)
+    yield handler_
 
-    handler = logging.StreamHandler(stream=log_stream)
-    handler.setFormatter(formatter)
-    yield handler
+    handler_ = logging.StreamHandler(stream=log_stream)
+    handler_.setFormatter(formatter)
+    yield handler_
 
-    handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
-    yield handler
+    handler_ = logging.StreamHandler()
+    handler_.setFormatter(formatter)
+    yield handler_
 
 
 app.logger.handlers = []
@@ -157,4 +158,3 @@ app.logger.info("Starting IBP Application")
 
 
 from ibp import models, views  # pylint: disable=wrong-import-position, unused-import
-
