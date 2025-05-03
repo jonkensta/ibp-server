@@ -140,6 +140,7 @@ def add_request(inmate_autoid):
         date_processed=datetime.date.today(),
         inmate=inmate,
     )
+    db.session.add(request)
     inmate.requests.append(request)
     db.session.commit()
 
@@ -259,6 +260,7 @@ def add_comment(inmate_autoid):
 
     if form.validate():
         comment = models.Comment.from_form(form)
+        db.session.add(comment)
         inmate.comments.append(comment)
         db.session.commit()
 
