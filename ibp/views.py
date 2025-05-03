@@ -1,17 +1,20 @@
 """IBP flask application views."""
 
-from datetime import datetime, date
+from datetime import date, datetime
 
 import flask
-from flask import url_for, redirect, flash, jsonify
-from flask import render_template, render_template_string
+from flask import (
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    render_template_string,
+    url_for,
+)
 
 import ibp
 
-from . import models
-from . import warnings
-from . import flask_forms
-
+from . import flask_forms, models, warnings
 
 app = ibp.app
 session = ibp.db.session
@@ -19,12 +22,14 @@ session = ibp.db.session
 
 @app.route("/")
 def index():
+    """Load the main web page."""
     app.logger.debug("loading index")
     return render_template("index.html")
 
 
 @app.route("/view_log")
 def view_log():
+    """Load the server log."""
     app.logger.debug("loading log")
     for handler in ibp.log_handlers:
         handler.flush()
@@ -34,6 +39,7 @@ def view_log():
 
 @app.route("/inmates", methods=["GET", "POST"])
 def search_inmates():
+    """Perform an inmate search."""
     form = flask_forms.InmateSearchForm()
 
     if flask.request.method == "GET":
@@ -47,10 +53,10 @@ def search_inmates():
         if first and last:
             first = form.first_name.data
             last = form.last_name.data
-            inmates, errors = models.Inmate.query_by_name(first, last)
+            inmates, errors = models.Inmate.query_by_name(session, first, last)
         else:
             id_ = form.id_.data
-            inmates, errors = models.Inmate.query_by_inmate_id(id_)
+            inmates, errors = models.Inmate.query_by_inmate_id(session, id_)
 
     else:
         return render_template("search_inmates.html", form=form)
@@ -68,19 +74,19 @@ def search_inmates():
         flask.flash("no inmates matched your search", "alert-warning")
         return render_template("search_inmates.html", form=form)
 
-    elif len(inmates) == 1:
+    if len(inmates) == 1:
         app.logger.debug("loading single search result in view_inmate")
         inmate = inmates[0]
         return redirect(url_for("view_inmate", autoid=inmate.autoid))
 
-    else:
-        app.logger.debug("loading search results in list_inmates")
-        return render_template("list_inmates.html", inmates=inmates)
+    app.logger.debug("loading search results in list_inmates")
+    return render_template("list_inmates.html", inmates=inmates)
 
 
 @app.route("/view_inmate/<int:autoid>")
 def view_inmate(autoid):
-    inmate = models.Inmate.query_by_autoid(autoid).first_or_404()
+    """Load the page for a single inmate."""
+    inmate = models.Inmate.query_by_autoid(session, autoid).first_or_404()
     app.logger.debug(
         "loading view_inmate for %s inmate #%08d", inmate.jurisdiction, inmate.id
     )
@@ -89,7 +95,7 @@ def view_inmate(autoid):
     inmate.lookups.append(datetime.now())
     session.commit()
 
-    inmate = models.Inmate.query_by_autoid(autoid).one()
+    inmate = models.Inmate.query_by_autoid(session, autoid).one()
     postmarkdate = flask.session.get("postmarkdate")
     comment_form = flask_forms.Comment()
 
@@ -104,15 +110,16 @@ def view_inmate(autoid):
 
 @app.route("/add_request/<int:inmate_autoid>", methods=["POST"])
 def add_request(inmate_autoid):
-    inmate = models.Inmate.query_by_autoid(inmate_autoid).first_or_404()
+    """Add a request for a specific inmate."""
+    inmate = models.Inmate.query_by_autoid(session, inmate_autoid).first_or_404()
 
     date_str = flask.request.form.get("postmarkdate", "")
     try:
         postmarkdate = datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
         return "Please enter the USPS postmark date on the envelope.", 400
-    else:
-        flask.session["postmarkdate"] = postmarkdate.strftime("%Y-%m-%d")
+
+    flask.session["postmarkdate"] = postmarkdate.strftime("%Y-%m-%d")
 
     action = flask.request.form.get("action", "Filled")
 
@@ -136,21 +143,21 @@ def add_request(inmate_autoid):
     request = models.Request.query.filter_by(autoid=request.autoid).one()
     rendered_request = render_template("request.html", request=request)
 
-    data = dict(request_autoid=str(request.autoid), request=rendered_request)
-    return jsonify(data)
+    return jsonify({"request_autoid": str(request.autoid), "request": rendered_request})
 
 
 @app.route("/request_warnings/<int:autoid>", methods=["POST"])
 def request_warnings(autoid):
-    inmate = models.Inmate.query.filter_by(autoid=autoid).first_or_404()
+    """Return request warnings."""
+    inmate = models.Inmate.query_by_autoid(session, autoid).first_or_404()
 
     date_str = flask.request.form.get("postmarkdate", "")
     try:
         postmarkdate = datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
         return "Please enter the USPS postmark date on the envelope.", 400
-    else:
-        flask.session["postmarkdate"] = postmarkdate.strftime("%Y-%m-%d")
+
+    flask.session["postmarkdate"] = postmarkdate.strftime("%Y-%m-%d")
 
     app.logger.debug(
         "checking warnings for %s inmate #%08d, postmarkdate %s",
@@ -193,6 +200,7 @@ def request_warnings(autoid):
 
 @app.route("/request_label/<int:autoid>", methods=["POST"])
 def request_label(autoid):
+    """Return a request label."""
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
     app.logger.debug("rendering label for request #%d", autoid)
     return render_template("request_label.xml", request=request)
@@ -200,6 +208,7 @@ def request_label(autoid):
 
 @app.route("/request_info/<int:autoid>")
 def request_info(autoid):
+    """Return info for a request."""
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
     app.logger.debug("fetching information for request #%d", autoid)
 
@@ -213,7 +222,7 @@ def request_info(autoid):
         {
             "inmate_jurisdiction": inmate.jurisdiction,
             "inmate_name": inmate.last_name + ", " + inmate.first_name,
-            "inmate_id": "%08d" % inmate.id,
+            "inmate_id": f"{inmate.id:08d}",
             "package_id": request.autoid,
             "unit_name": unit and unit.street1 or "N/A",
             "unit_shipping_method": unit and unit.shipping_method or "N/A",
@@ -223,6 +232,7 @@ def request_info(autoid):
 
 @app.route("/delete_request/<int:autoid>", methods=["DELETE"])
 def delete_request(autoid):
+    """Delete a request."""
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
     app.logger.debug("deleting request #%d", autoid)
     session.delete(request)
@@ -232,6 +242,7 @@ def delete_request(autoid):
 
 @app.route("/add_comment/<int:inmate_autoid>", methods=["POST"])
 def add_comment(inmate_autoid):
+    """Create a comment."""
     inmate = models.Inmate.query_by_autoid(inmate_autoid).first_or_404()
     form = flask_forms.Comment()
 
@@ -249,8 +260,7 @@ def add_comment(inmate_autoid):
 
         comment = render_template("comment.html", comment=comment)
         fieldset = render_template("comment_fieldset.html", comment_form=form)
-        data = dict(comment=comment, fieldset=fieldset)
-        return jsonify(data)
+        return jsonify({"comment": comment, "fieldset": fieldset})
 
     fieldset = render_template("comment_fieldset.html", comment_form=form)
     return fieldset, 400
@@ -258,6 +268,8 @@ def add_comment(inmate_autoid):
 
 @app.route("/delete_comment/<int:autoid>", methods=["DELETE"])
 def delete_comment(autoid):
+    """Delete a comment."""
+
     comment = models.Comment.query.filter_by(autoid=autoid).first_or_404()
     app.logger.debug("deleting comment #%d", autoid)
     session.delete(comment)
@@ -267,12 +279,14 @@ def delete_comment(autoid):
 
 @app.route("/list_units")
 def list_units():
+    """Return the units view."""
     app.logger.debug("loading list_units")
     return render_template("list_units.html", units=models.Unit.query)
 
 
 @app.route("/view_unit/<int:autoid>", methods=["GET", "POST"])
 def view_unit(autoid):
+    """Return a unit view."""
     unit = models.Unit.query.filter_by(autoid=autoid).first_or_404()
     form = flask_forms.Unit()
 
@@ -293,6 +307,7 @@ def view_unit(autoid):
 @app.route("/return_address", methods=["POST"])
 @ibp.appkey_required
 def return_address():
+    """Return the IBP mailing return address."""
     app.logger.debug("loading return_address view")
     address = dict(ibp.config["address"])
     return jsonify(address)
@@ -302,21 +317,23 @@ def return_address():
 @app.route("/request_address/<int:autoid>", methods=["POST"])
 @ibp.appkey_required
 def request_address(autoid):
+    """Return the a request address."""
+
     app.logger.debug("loading request_address view for request %d", autoid)
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
 
-    inmate = request.inmate
-    session.add(inmate)
-    inmate.try_fetch_update()
+    inmate_autoid = request.inmate.autoid
+    inmate = models.Inmate.query_by_autoid(session, inmate_autoid).first()
+
+    if inmate is None:
+        return "inmate is no longer in the system", 400
 
     unit = inmate.unit
     if unit is None:
         return "inmate is not assigned to a unit", 400
 
-    session.add(unit)
-
-    inmate_name = "{} {} #{:08d}".format(
-        inmate.first_name.title(), inmate.last_name.title(), inmate.id
+    inmate_name = (
+        f"{inmate.first_name.title()} {inmate.last_name.title} #{inmate.id:08d}"
     )
 
     return jsonify(
@@ -335,6 +352,7 @@ def request_address(autoid):
 @app.route("/unit_autoids", methods=["POST"])
 @ibp.appkey_required
 def unit_autoids():
+    """Return a list of unit autoids."""
     app.logger.debug("loading unit_autoids view")
     autoids = {unit.name: unit.autoid for unit in models.Unit.query}
     return jsonify(autoids)
@@ -344,6 +362,7 @@ def unit_autoids():
 @app.route("/unit_address/<int:autoid>", methods=["POST"])
 @ibp.appkey_required
 def unit_address(autoid):
+    """Return a unit address."""
     app.logger.debug("loading unit_address view for unit %d", autoid)
     unit = models.Unit.query.filter_by(autoid=autoid).first_or_404()
     name = ibp.config.get("shipping", "unit_address_name")
@@ -364,11 +383,15 @@ def unit_address(autoid):
 @app.route("/request_destination/<int:autoid>", methods=["POST"])
 @ibp.appkey_required
 def request_destination(autoid):
+    """Return the destination of a request."""
     app.logger.debug("loading request_destination view for request %d", autoid)
     request = models.Request.query.filter_by(autoid=autoid).first_or_404()
 
-    inmate = request.inmate
-    inmate.try_fetch_update()
+    inmate_autoid = request.inmate.autoid
+    inmate = models.Inmate.query_by_autoid(session, inmate_autoid).first()
+
+    if inmate is None:
+        return "inmate is no longer in the system.", 400
 
     unit = inmate.unit
     if unit is None:
@@ -376,13 +399,14 @@ def request_destination(autoid):
         app.logger.debug(msg)
         return msg, 400
 
-    return jsonify(dict(name=unit.name))
+    return jsonify({"name": unit.name})
 
 
 @ibp.csrf.exempt
 @app.route("/ship_requests", methods=["POST"])
 @ibp.appkey_required
 def ship_requests():
+    """Ship a request."""
     app.logger.debug("loading ship_requests view")
 
     form = flask_forms.Shipment(data=flask.request.form)
@@ -408,8 +432,14 @@ def ship_requests():
         return msg, 400
 
     for request in requests:
-        inmate = request.inmate
-        inmate.try_fetch_update()
+        inmate_autoid = request.inmate.autoid
+        inmate = models.Inmate.query_by_autoid(session, inmate_autoid).first()
+
+        if inmate is None:
+            app.logger.debug(
+                "Inmate for request %d is no longer in the system", request.autoid
+            )
+            return msg, 400
 
         if inmate.unit is None:
             app.logger.debug("Inmate for request '%d' is unassigned", request.autoid)
@@ -433,4 +463,4 @@ def ship_requests():
     app.logger.debug(
         "created %d ounce(s) shipment %d", form.weight.data, shipment.autoid
     )
-    return jsonify(dict())
+    return jsonify({})

@@ -84,12 +84,10 @@ class Inmate(Model):  # pylint: disable=too-many-instance-attributes
     @classmethod
     def from_response(cls, session, response):
         """Create an Inmate instance from a provider response."""
-        jurisdiction = response["jurisdiction"]
-        id_ = int(response["id"].replace("-", ""))
-        with session.no_autoflush:
-            inmate = cls.as_unique(jurisdiction, id_)
-            inmate.update_from_response(**response)
-        return inmate
+        kwargs = dict(response)
+        kwargs["id"] = int(kwargs["id"].replace("-", ""))
+        kwargs["unit"] = session.query(Unit).filter_by(name=kwargs["unit"]).first()
+        return cls(**kwargs)
 
     @classmethod
     def query_by_autoid(cls, session, autoid):
@@ -103,10 +101,11 @@ class Inmate(Model):  # pylint: disable=too-many-instance-attributes
         inmates, _ = providers.query_by_inmate_id(
             inmate.id, jurisdictions=[inmate.jurisdiction], timeout=timeout
         )
-        inmates = map(cls.from_response, inmates)
 
-        session.add_all(inmates)
-        session.commit()
+        with session.begin_nested():
+            for inmate in inmates:
+                inmate = cls.from_response(session, inmate)
+                session.merge(inmate)
 
         return cls.query.filter_by(autoid=autoid)
 
@@ -114,10 +113,11 @@ class Inmate(Model):  # pylint: disable=too-many-instance-attributes
     def query_by_inmate_id(cls, session, id_):
         """Query the inmate providers by inmate id."""
         inmates, errors = providers.query_by_inmate_id(id_)
-        inmates = map(Inmate.from_response, inmates)
 
-        session.add_all(inmates)
-        session.commit()
+        with session.begin_nested():
+            for inmate in inmates:
+                inmate = cls.from_response(session, inmate)
+                session.merge(inmate)
 
         inmates = cls.query.filter_by(id=id_)
         return inmates, errors
@@ -129,10 +129,11 @@ class Inmate(Model):  # pylint: disable=too-many-instance-attributes
         inmates, errors = providers.query_by_name(
             first_name, last_name, timeout=timeout
         )
-        inmates = map(Inmate.from_response, inmates)
 
-        session.add_all(inmates)
-        session.commit()
+        with session.begin_nested():
+            for inmate in inmates:
+                inmate = cls.from_response(session, inmate)
+                session.merge(inmate)
 
         sql_lower = sqlalchemy.func.lower
         inmates = cls.query.filter(
@@ -154,29 +155,10 @@ class Inmate(Model):  # pylint: disable=too-many-instance-attributes
         ttl = timedelta(hours=ttl_hours)
         return age < ttl
 
-    def try_fetch_update(self):
-        if not self.entry_is_fresh():
-            self = Inmate.query_by_autoid(self.autoid).first()
 
-    def update_from_response(self, **kwargs):
-        """Update an inmate instance from a provider response."""
-        unit_name = kwargs.get("unit") or ""
-        if self.unit is None or self.unit.name != unit_name:
-            self.unit = Unit.query.filter_by(name=unit_name).first()
+class Lookup(Model):  # pylint: disable=too-few-public-methods
+    """Sqlalchemy for IBP lookups."""
 
-        self.first_name = kwargs["first_name"]
-        self.last_name = kwargs["last_name"]
-
-        self.sex = kwargs.get("sex")
-        self.url = kwargs.get("url")
-        self.race = kwargs.get("race")
-        self.release = kwargs.get("release")
-
-        self.datetime_fetched = kwargs.get("datetime_fetched")
-        self.date_last_lookup = kwargs.get("date_last_lookup")
-
-
-class Lookup(Model):
     __tablename__ = "lookups"
 
     autoid = Column(Integer, primary_key=True)
@@ -254,6 +236,8 @@ class Comment(Model):  # pylint: disable=too-few-public-methods
 
 
 class Unit(Model):
+    """Sqlalchemy model for IBP units."""
+
     __tablename__ = "units"
 
     autoid = Column(Integer, primary_key=True)
