@@ -38,7 +38,7 @@ class ReleaseDate(sqlalchemy.types.TypeDecorator):
     def process_result_value(self, value, _):
         try:
             return datetime.date.fromisoformat(value)
-        except ValueError:
+        except (ValueError, TypeError):
             return value
 
 
