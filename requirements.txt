@@ -1,11 +1,9 @@
 wheel
 alembic
-BeautifulSoup4
 Flask
 Flask-Bootstrap
 Flask-SQLAlchemy
 Flask-WTF
-Flask-Login
 Jinja2
 gunicorn
 SQLAlchemy
