@@ -32,9 +32,6 @@ def read_server_config():
 
 config = read_server_config()  # pylint: disable=invalid-name
 
-# setup flask application
-app = Flask(__name__)
-
 
 def get_database_uri():
     """Get URI of sqlite3 database."""
@@ -44,8 +41,7 @@ def get_database_uri():
     return urllib.parse.urlunparse(uri_parts)
 
 
-database_uri = get_database_uri()
-
+app = Flask(__name__)
 app.config.update(
     SECRET_KEY=config.get("server", "secret_key"),
     SQLALCHEMY_DATABASE_URI=get_database_uri(),
