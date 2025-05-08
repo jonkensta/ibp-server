@@ -28,7 +28,7 @@ def _update_inmate_from_response(inmate, session, response):
 def _build_or_update_inmate_from_response(session, response):
     """Build or update an Inmate instance from a response."""
     jurisdiction = response["jurisdiction"]
-    id_ = response["id"]
+    id_ = int(response["id"].replace("-", ""))
 
     inmate = (
         session.query(models.Inmate)
