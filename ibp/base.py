@@ -1,18 +1,14 @@
-"""Initialize the IBP flask application."""
+"""Initialize the IBP FastAPI application."""
 
 import configparser
 import logging
 import os
-import urllib
-from datetime import timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from flask import Flask
-from flask_bootstrap import Bootstrap
-from flask_sqlalchemy import SQLAlchemy
-from flask_wtf.csrf import CSRFProtect
+from fastapi import FastAPI
 from sqlalchemy import MetaData
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -30,26 +26,30 @@ def read_server_config():
     return server_config
 
 
-config = read_server_config()  # pylint: disable=invalid-name
+config = read_server_config()
 
 
 def get_database_uri():
     """Get URI of sqlite3 database."""
     toplevel = get_toplevel_path()
     filepath = toplevel.joinpath(config.get("database", "database")).absolute()
-    uri_parts = ("sqlite", "/", str(filepath), "", "", "")  # netloc needs to be "/".
-    return urllib.parse.urlunparse(uri_parts)
+    # For SQLite, using 'sqlite+aiosqlite' for async support with SQLAlchemy
+    return f"sqlite+aiosqlite:///{filepath}"
 
 
-app = Flask(__name__)
-app.config.update(
-    SECRET_KEY=config.get("server", "secret_key"),
-    SQLALCHEMY_DATABASE_URI=get_database_uri(),
-    SQLALCHEMY_TRACK_MODIFICATIONS=False,
+# Initialize FastAPI app
+app = FastAPI(
+    title="Inside Books Project API",
+    description="API for managing inmate data, requests, shipments, and comments.",
+    version="0.1.0",
 )
 
-Bootstrap(app)
-csrf = CSRFProtect(app)
+# Configure SQLAlchemy for async operations
+DATABASE_URL = get_database_uri()
+engine = create_async_engine(DATABASE_URL, echo=True)
+AsyncSessionLocal = async_sessionmaker(
+    autocommit=False, autoflush=False, bind=engine, class_=AsyncSession
+)
 
 
 class Base(DeclarativeBase):  # pylint: disable=too-few-public-methods
@@ -75,14 +75,6 @@ class Base(DeclarativeBase):  # pylint: disable=too-few-public-methods
                 raise AttributeError(msg)
 
 
-db = SQLAlchemy(model_class=Base)
-db.init_app(app)
-
-app.config["REMEMBER_COOKIE_DURATION"] = timedelta(minutes=10)
-
-# configure logging
-
-
 class RotatingStream:
     """Model a rotating stream for logging purposes."""
 
@@ -101,7 +93,7 @@ class RotatingStream:
         self.lines.extend(lines)
 
         # coerce to max_lines length
-        self.lines = self.lines[(-self._max_lines) :]  # noqa: E203
+        self.lines = self.lines[(-self._max_lines) :]
 
     def flush(self, *args, **kwargs):
         """Flush the rotating stream."""
@@ -131,26 +123,26 @@ def build_log_handlers():
     yield handler_
 
 
-app.logger.handlers = []
+root_logger = logging.getLogger()
+root_logger.handlers = []
 log_level = logging.getLevelName(config.get("logging", "level"))
 log_handlers = list(build_log_handlers())
 
 for logger in (
-    app.logger,
     logging.getLogger("PROVIDERS"),
+    logging.getLogger("sqlalchemy.engine"),
 ):
     logger.setLevel(log_level)
     for handler in log_handlers:
         logger.addHandler(handler)
 
-for logger in (
-    logging.getLogger("urllib3"),
-    logging.getLogger("werkzeug"),
-    logging.getLogger("requests"),
+for logger_name in (
+    "asyncio",
+    "uvicorn",
 ):
-    logger.setLevel(logging.ERROR)
+    logging.getLogger(logger_name).setLevel(logging.ERROR)
 
-app.logger.info("Starting IBP Application")
+root_logger.info("Starting IBP Application")
 
-
-from ibp import models, views  # pylint: disable=wrong-import-position, unused-import
+# Import models to ensure they are registered with SQLAlchemy metadata
+from ibp import models  # pylint: disable=wrong-import-position, unused-import

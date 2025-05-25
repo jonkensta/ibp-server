@@ -1,18 +1,23 @@
 """IBP sqlalchemy models."""
 
 import datetime
+from typing import Optional
 
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.types
 from sqlalchemy import Enum  # type: ignore
-from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import relationship
-from sqlalchemy.schema import ForeignKeyConstraint, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.schema import (
+    ForeignKeyConstraint,
+    PrimaryKeyConstraint,
+    UniqueConstraint,
+)
 
-from .base import config, db
+from .base import Base, config
 
 
 class ReleaseDate(sqlalchemy.types.TypeDecorator):
@@ -24,66 +29,119 @@ class ReleaseDate(sqlalchemy.types.TypeDecorator):
     cache_ok = True
 
     def process_bind_param(self, value, _):
+        """Process value before binding to database."""
+        if value is None:
+            return None
         try:
             return value.isoformat()
         except AttributeError:
             return str(value)
 
     def process_literal_param(self, value, _):
+        """Process value for literal inclusion in SQL string."""
+        if value is None:
+            return "NULL"
         try:
-            return value.isoformat()
+            return f"'{value.isoformat()}'"
         except AttributeError:
-            return str(value)
+            return f"'{str(value)}'"
 
     def process_result_value(self, value, _):
+        """Process value after fetching from database."""
+        if value is None:
+            return None
         try:
             return datetime.date.fromisoformat(value)
         except (ValueError, TypeError):
             return value
 
 
-class Inmate(db.Model):  # pylint: disable=too-many-instance-attributes
+Jurisdiction = Enum("Texas", "Federal", name="jurisdiction_enum")
+
+
+class HasInmateIndex:  # pylint: disable=too-few-public-methods
+    """Mixin for models associated with an Inmate."""
+
+    inmate_jurisdiction: Mapped[str] = mapped_column(Jurisdiction, nullable=False)
+    inmate_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    index: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    @declared_attr
+    def __table_args__(cls):  # pylint: disable=no-self-argument
+        return (
+            PrimaryKeyConstraint(
+                "inmate_jurisdiction",
+                "inmate_id",
+                "index",
+            ),
+            ForeignKeyConstraint(
+                ["inmate_jurisdiction", "inmate_id"],
+                ["inmates.jurisdiction", "inmates.id"],
+            ),
+        )
+
+    @declared_attr
+    def inmate(cls) -> Mapped["Inmate"]:  # pylint: disable=no-self-argument
+        """Declare the relationship to the Inmate model."""
+        return relationship(
+            "Inmate",
+            back_populates="inmates",
+            uselist=False,
+        )
+
+
+class Inmate(Base):  # pylint: disable=too-many-instance-attributes
     """Inmate sqlalchemy model."""
 
     __tablename__ = "inmates"
 
-    autoid = Column(Integer, primary_key=True)
-
-    first_name = Column(String)
-    last_name = Column(String)
-
-    jurisdiction = Column(
-        Enum("Texas", "Federal", name="jurisdiction_enum"), nullable=False
+    # Composite Primary Key: jurisdiction and id
+    jurisdiction: Mapped[str] = mapped_column(
+        Enum("Texas", "Federal", name="jurisdiction_enum"),
+        primary_key=True,
+        nullable=False,
     )
-    id = Column(Integer, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
 
-    unit_id = Column(Integer, ForeignKey("units.autoid"))
-    unit = relationship("Unit", uselist=False, back_populates="inmates")
+    first_name: Mapped[Optional[str]] = mapped_column(String)
+    last_name: Mapped[Optional[str]] = mapped_column(String)
 
-    race = Column(String)
-    sex = Column(String)
-    release = Column(ReleaseDate)
-    url = Column(String)
+    unit_id: Mapped[Optional[int]] = mapped_column(ForeignKey("units.autoid"))
+    unit: Mapped[Optional["Unit"]] = relationship("Unit", uselist=False)
 
-    datetime_fetched = Column(DateTime)
-    date_last_lookup = Column(Date)
+    race: Mapped[Optional[str]] = mapped_column(String)
+    sex: Mapped[Optional[str]] = mapped_column(String)
+    release: Mapped[Optional[datetime.date]] = mapped_column(ReleaseDate)
+    url: Mapped[Optional[str]] = mapped_column(String)
 
-    requests = relationship(
+    datetime_fetched: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    date_last_lookup: Mapped[Optional[datetime.date]] = mapped_column(Date)
+
+    requests: Mapped[list["Request"]] = relationship(
         "Request",
         back_populates="inmate",
         order_by="desc(Request.date_postmarked)",
+        cascade="all, delete-orphan",
+        collection_class=list,
     )
 
-    comments = relationship("Comment", order_by="desc(Comment.datetime)")
+    comments: Mapped[list["Comment"]] = relationship(
+        "Comment",
+        back_populates="inmate",
+        order_by="desc(Comment.datetime_created)",
+        cascade="all, delete-orphan",
+        collection_class=list,
+    )
 
-    _lookups_association = relationship("Lookup", order_by="desc(Lookup.datetime)")
-    lookups = association_proxy("_lookups_association", "datetime")
+    _lookups_association: Mapped[list["Lookup"]] = relationship(
+        "Lookup",
+        order_by="desc(Lookup.datetime_created)",
+        cascade="all, delete-orphan",
+        collection_class=list,
+    )
+    lookups = association_proxy("_lookups_association", "datetime_created")
 
-    @declared_attr
-    def __table_args__(cls):  # pylint: disable=no-self-argument
-        return (UniqueConstraint("jurisdiction", "id"),)
-
-    def entry_is_fresh(self):
+    def entry_is_fresh(self) -> bool:
         """Flag if an entry is fresh."""
         if self.datetime_fetched is None:
             return False
@@ -94,126 +152,82 @@ class Inmate(db.Model):  # pylint: disable=too-many-instance-attributes
         return age < ttl
 
 
-class Lookup(db.Model):  # pylint: disable=too-few-public-methods
+class Lookup(HasInmateIndex, Base):  # pylint: disable=too-few-public-methods
     """Sqlalchemy for IBP lookups."""
 
     __tablename__ = "lookups"
 
-    autoid = Column(Integer, primary_key=True)
-    datetime = Column(DateTime, nullable=False)
-
-    inmate_id = Column(Integer, ForeignKey("inmates.autoid"))
-
-    def __init__(self, dt):
-        super().__init__()
-        self.datetime = dt
+    # index is provided by HasInmateIndex
+    datetime_created: Mapped[datetime.datetime] = mapped_column(
+        DateTime, nullable=False
+    )
 
 
-class Request(db.Model):  # pylint: disable=too-few-public-methods
+class Request(HasInmateIndex, Base):  # pylint: disable=too-few-public-methods
     """Sqlalchemy model for IBP requests."""
 
     __tablename__ = "requests"
 
-    autoid = Column(Integer, primary_key=True)
+    # index is provided by HasInmateIndex
+    date_processed: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    date_postmarked: Mapped[datetime.date] = mapped_column(Date, nullable=False)
 
-    date_processed = Column(Date, nullable=False)
-    date_postmarked = Column(Date, nullable=False)
-
-    action = Column(Enum("Filled", "Tossed", name="action_enum"), nullable=False)
-
-    inmate_autoid = Column(Integer, ForeignKey("inmates.autoid"))
-    inmate = relationship("Inmate", uselist=False, back_populates="requests")
-
-    shipment_autoid = Column(Integer, ForeignKey("shipments.autoid"))
-    shipment = relationship("Shipment", uselist=False, back_populates="requests")
+    action: Mapped[str] = mapped_column(
+        Enum("Filled", "Tossed", name="action_enum"), nullable=False
+    )
 
     @property
-    def status(self):
+    def status(self) -> str:
         """Return status of a request."""
         shipped = self.shipment and self.shipment.date_shipped and "Shipped"
         return shipped or self.action
 
 
-class Shipment(db.Model):  # pylint: disable=too-few-public-methods
-    """Sqlalchemy model for IBP shipments."""
-
-    __tablename__ = "shipments"
-
-    autoid = Column(Integer, primary_key=True)
-
-    date_shipped = Column(Date, nullable=False)
-
-    tracking_url = Column(String)
-    tracking_code = Column(String)
-
-    weight = Column(Integer, nullable=False)
-    postage = Column(Integer, nullable=False)  # postage in cents
-
-    requests = relationship("Request", back_populates="shipment")
-
-    unit_id = Column(Integer, ForeignKey("units.autoid"))
-    unit = relationship("Unit", uselist=False, back_populates="shipments")
-
-
-class Comment(db.Model):  # pylint: disable=too-few-public-methods
+class Comment(HasInmateIndex, Base):  # pylint: disable=too-few-public-methods
     """Sqlalchemy model for IBP comments."""
 
     __tablename__ = "comments"
 
-    autoid = Column(Integer, primary_key=True)
-
-    datetime = Column(DateTime, nullable=False)
-    author = Column(String, nullable=False)
-    body = Column(Text, nullable=False)
-
-    inmate_id = Column(Integer, ForeignKey("inmates.autoid"))
-
-    @classmethod
-    def from_form(cls, form):
-        """Update comment instance from a form."""
-        return cls(
-            datetime=datetime.datetime.today(),
-            author=form.author.data,
-            body=form.comment.data,
-        )
+    # index is provided by HasInmateIndex
+    datetime_created: Mapped[datetime.datetime] = mapped_column(
+        DateTime, nullable=False
+    )
+    author: Mapped[str] = mapped_column(String, nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
 
 
-class Unit(db.Model):  # pylint: disable=too-many-instance-attributes
+class Unit(Base):  # pylint: disable=too-many-instance-attributes
     """Sqlalchemy model for IBP units."""
 
     __tablename__ = "units"
 
-    autoid = Column(Integer, primary_key=True)
+    autoid: Mapped[int] = mapped_column(Integer, primary_key=True)
 
-    name = Column(String, nullable=False)
-    street1 = Column(String, nullable=False)
-    street2 = Column(String)
+    name: Mapped[str] = mapped_column(
+        String, nullable=False, unique=True
+    )  # Added unique constraint
+    street1: Mapped[str] = mapped_column(String, nullable=False)
+    street2: Mapped[Optional[str]] = mapped_column(String)
 
-    city = Column(String, nullable=False)
-    zipcode = Column(String(12), nullable=False)
-    state = Column(String(3), nullable=False)
+    city: Mapped[str] = mapped_column(String, nullable=False)
+    zipcode: Mapped[str] = mapped_column(String(12), nullable=False)
+    state: Mapped[str] = mapped_column(String(3), nullable=False)
 
-    url = Column(String)
-    jurisdiction = Column(
+    url: Mapped[Optional[str]] = mapped_column(String)
+    jurisdiction: Mapped[str] = mapped_column(
         Enum("Texas", "Federal", name="jurisdiction_enum"), nullable=False
     )
 
-    shipping_method = Column(Enum("Box", "Individual", name="shipping_enum"))
+    shipping_method: Mapped[Optional[str]] = mapped_column(
+        Enum("Box", "Individual", name="shipping_enum")
+    )
 
-    inmates = relationship("Inmate", back_populates="unit")
-    shipments = relationship("Shipment", back_populates="unit")
+    inmates: Mapped[list["Inmate"]] = relationship(
+        "Inmate", back_populates="unit"
+    )  # Changed List to list
 
     @declared_attr
     def __table_args__(cls):  # pylint: disable=no-self-argument
-        return (UniqueConstraint("jurisdiction", "name"),)
-
-    def update_from_form(self, form):
-        """Update a unit instance from a form."""
-        self.name = form.name.data
-        self.url = form.url.data or None
-        self.city = form.city.data
-        self.state = form.state.data
-        self.street1 = form.street1.data
-        self.street2 = form.street2.data
-        self.zipcode = form.zipcode.data
-        self.shipping_method = form.shipping_method.data or None
+        return (
+            UniqueConstraint("jurisdiction", "name", name="uq_units_jurisdiction_name"),
+        )
