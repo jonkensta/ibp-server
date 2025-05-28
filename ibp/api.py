@@ -331,9 +331,7 @@ async def add_comment(
     comment_data: schemas.CommentCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Add a new comment for a specific inmate.
-    """
+    """Add a new comment for a specific inmate."""
     inmate_stmt = select(models.Inmate).where(
         models.Inmate.jurisdiction == jurisdiction, models.Inmate.id == inmate_id
     )
@@ -406,24 +404,26 @@ async def delete_comment(
     await db.commit()
 
 
-@app.get("/units", response_model=List[schemas.UnitInDB])
+@app.get("/units", response_model=List[schemas.Unit])
 async def get_all_units(db: AsyncSession = Depends(get_db)):
-    """
-    Retrieve a list of all prison units.
-    """
+    """Retrieve a list of all prison units."""
     logger.debug("Retrieving all units")
     result = await db.execute(select(models.Unit))
     units = result.scalars().all()
     return units
 
 
-@app.get("/units/{unit_id}", response_model=schemas.UnitInDB)
-async def get_unit(unit_id: int, db: AsyncSession = Depends(get_db)):
-    """
-    Retrieve a single unit by its ID.
-    """
-    logger.debug("Retrieving unit with ID %d", unit_id)
-    stmt = select(models.Unit).where(models.Unit.autoid == unit_id)
+@app.get("/units/{jurisdiction}/{name}", response_model=schemas.Unit)
+async def get_unit(
+    jurisdiction: schemas.JurisdictionEnum,
+    name: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve a single unit by its ID."""
+    logger.debug("Retrieving unit with jurisdiction=%s, name=%s", jurisdiction, name)
+    stmt = select(models.Unit).where(
+        models.Unit.jurisdiction == jurisdiction, models.Unit.name == name
+    )
     result = await db.execute(stmt)
     unit = result.scalar_one_or_none()
 
@@ -434,15 +434,18 @@ async def get_unit(unit_id: int, db: AsyncSession = Depends(get_db)):
     return unit
 
 
-@app.put("/units/{unit_id}", response_model=schemas.UnitInDB)
+@app.put("/units/{jurisdiction}/{name}", response_model=schemas.Unit)
 async def update_unit(
-    unit_id: int, unit_data: schemas.UnitUpdate, db: AsyncSession = Depends(get_db)
+    jurisdiction: schemas.JurisdictionEnum,
+    name: str,
+    unit_data: schemas.UnitUpdate,
+    db: AsyncSession = Depends(get_db),
 ):
-    """
-    Update an existing unit by its ID.
-    """
-    logger.debug("Updating unit with ID %d", unit_id)
-    stmt = select(models.Unit).where(models.Unit.autoid == unit_id)
+    """Update an existing unit by its ID."""
+    logger.debug("Updating unit with jurisdiction=%s, name=%s", jurisdiction, name)
+    stmt = select(models.Unit).where(
+        models.Unit.jurisdiction == jurisdiction, models.Unit.name == name
+    )
     result = await db.execute(stmt)
     unit = result.scalar_one_or_none()
 
@@ -456,7 +459,7 @@ async def update_unit(
 
     await db.commit()
     await db.refresh(unit)
-    logger.debug("Updated unit: %s", unit.name)
+    logger.debug("Updated unit with jurisdiction=%s, name=%s", jurisdiction, name)
     return unit
 
 
