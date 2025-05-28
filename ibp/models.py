@@ -10,7 +10,8 @@ from sqlalchemy import Enum  # type: ignore
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import mapped_column  # pylint: disable=no-name-in-module
+from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.schema import (
     ForeignKeyConstraint,
     PrimaryKeyConstraint,
@@ -97,7 +98,7 @@ class Inmate(Base):  # pylint: disable=too-many-instance-attributes
 
     # Composite Primary Key: jurisdiction and id
     jurisdiction: Mapped[str] = mapped_column(
-        Enum("Texas", "Federal", name="jurisdiction_enum"),
+        Jurisdiction,
         primary_key=True,
         nullable=False,
     )
@@ -115,7 +116,6 @@ class Inmate(Base):  # pylint: disable=too-many-instance-attributes
     url: Mapped[Optional[str]] = mapped_column(String)
 
     datetime_fetched: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
-    date_last_lookup: Mapped[Optional[datetime.date]] = mapped_column(Date)
 
     requests: Mapped[list["Request"]] = relationship(
         "Request",
@@ -157,7 +157,6 @@ class Lookup(HasInmateIndex, Base):  # pylint: disable=too-few-public-methods
 
     __tablename__ = "lookups"
 
-    # index is provided by HasInmateIndex
     datetime_created: Mapped[datetime.datetime] = mapped_column(
         DateTime, nullable=False
     )
@@ -168,7 +167,6 @@ class Request(HasInmateIndex, Base):  # pylint: disable=too-few-public-methods
 
     __tablename__ = "requests"
 
-    # index is provided by HasInmateIndex
     date_processed: Mapped[datetime.date] = mapped_column(Date, nullable=False)
     date_postmarked: Mapped[datetime.date] = mapped_column(Date, nullable=False)
 
@@ -188,7 +186,6 @@ class Comment(HasInmateIndex, Base):  # pylint: disable=too-few-public-methods
 
     __tablename__ = "comments"
 
-    # index is provided by HasInmateIndex
     datetime_created: Mapped[datetime.datetime] = mapped_column(
         DateTime, nullable=False
     )
@@ -196,16 +193,16 @@ class Comment(HasInmateIndex, Base):  # pylint: disable=too-few-public-methods
     body: Mapped[str] = mapped_column(Text, nullable=False)
 
 
-class Unit(Base):  # pylint: disable=too-many-instance-attributes
+class Unit(
+    Base
+):  # pylint: disable=too-many-instance-attributes, too-few-public-methods
     """Sqlalchemy model for IBP units."""
 
     __tablename__ = "units"
 
-    autoid: Mapped[int] = mapped_column(Integer, primary_key=True)
+    jurisdiction: Mapped[str] = mapped_column(Jurisdiction, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
 
-    name: Mapped[str] = mapped_column(
-        String, nullable=False, unique=True
-    )  # Added unique constraint
     street1: Mapped[str] = mapped_column(String, nullable=False)
     street2: Mapped[Optional[str]] = mapped_column(String)
 
@@ -214,17 +211,12 @@ class Unit(Base):  # pylint: disable=too-many-instance-attributes
     state: Mapped[str] = mapped_column(String(3), nullable=False)
 
     url: Mapped[Optional[str]] = mapped_column(String)
-    jurisdiction: Mapped[str] = mapped_column(
-        Enum("Texas", "Federal", name="jurisdiction_enum"), nullable=False
-    )
 
     shipping_method: Mapped[Optional[str]] = mapped_column(
         Enum("Box", "Individual", name="shipping_enum")
     )
 
-    inmates: Mapped[list["Inmate"]] = relationship(
-        "Inmate", back_populates="unit"
-    )  # Changed List to list
+    inmates: Mapped[list["Inmate"]] = relationship("Inmate", back_populates="unit")
 
     @declared_attr
     def __table_args__(cls):  # pylint: disable=no-self-argument
