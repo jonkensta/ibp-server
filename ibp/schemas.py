@@ -81,29 +81,12 @@ class UnitCreate(UnitBase):
     """Schema for creating a new Unit."""
 
 
-class InmateCreate(InmateBase):
-    """Schema for creating a new Inmate."""
-
-    unit_id: Optional[int] = None
-
-
-class LookupCreate(LookupBase):
-    """Schema for creating a new Lookup."""
-
-    index: Optional[int] = None
-
-
 class RequestCreate(RequestBase):
     """Schema for creating a new Request."""
-
-    index: Optional[int] = None
-    shipment_autoid: Optional[int] = None
 
 
 class CommentCreate(CommentBase):
     """Schema for creating a new Comment."""
-
-    index: Optional[int] = None
 
 
 class UnitUpdate(UnitBase):
@@ -118,42 +101,25 @@ class UnitUpdate(UnitBase):
     shipping_method: Optional[ShippingMethodEnum] = None
 
 
-class InmateUpdate(InmateBase):
-    """Schema for updating an existing Inmate."""
-
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    jurisdiction: Optional[JurisdictionEnum] = None
-    id: Optional[int] = None
-    unit_id: Optional[int] = None
-    datetime_fetched: Optional[datetime.datetime] = None
-    date_last_lookup: Optional[datetime.date] = None
-
-
 class RequestUpdate(RequestBase):
     """Schema for updating an existing Request."""
 
     date_processed: Optional[datetime.date] = None
     date_postmarked: Optional[datetime.date] = None
     action: Optional[ActionEnum] = None
-    shipment_autoid: Optional[int] = None
 
 
 class CommentUpdate(CommentBase):
     """Schema for updating an existing Comment."""
 
-    datetime_created: Optional[datetime.datetime] = None
     author: Optional[str] = None
     body: Optional[str] = None
 
 
-class RequestInDB(RequestBase):
+class Request(RequestBase):
     """Schema for Request records as stored in the database."""
 
-    inmate_jurisdiction: JurisdictionEnum
-    inmate_id: int
     index: int
-    shipment_autoid: Optional[int] = None
     status: str
 
     class Config:  # pylint: disable=too-few-public-methods
@@ -162,11 +128,9 @@ class RequestInDB(RequestBase):
         from_attributes = True
 
 
-class CommentInDB(CommentBase):
+class Comment(CommentBase):
     """Schema for Comment records as stored in the database."""
 
-    inmate_jurisdiction: JurisdictionEnum
-    inmate_id: int
     index: int
 
     class Config:  # pylint: disable=too-few-public-methods
@@ -175,39 +139,24 @@ class CommentInDB(CommentBase):
         from_attributes = True
 
 
-class LookupInDB(LookupBase):
-    """Schema for Lookup records as stored in the database."""
-
-    inmate_jurisdiction: JurisdictionEnum
-    inmate_id: int
-    index: int
-
-    class Config:  # pylint: disable=too-few-public-methods
-        """Pydantic configuration for ORM mode."""
-
-        from_attributes = True
-
-
-class UnitInDB(UnitBase):
+class Unit(UnitBase):
     """Schema for Unit records as stored in the database."""
 
-    autoid: int
-
     class Config:  # pylint: disable=too-few-public-methods
         """Pydantic configuration for ORM mode."""
 
         from_attributes = True
 
 
-class InmateInDB(InmateBase):
+class Inmate(InmateBase):
     """Schema for Inmate records as stored in the database."""
 
     datetime_fetched: Optional[datetime.datetime] = None
-    date_last_lookup: Optional[datetime.date] = None
-    unit_id: Optional[int] = None
 
-    requests: list[RequestInDB] = []
-    comments: list[CommentInDB] = []
+    unit: Unit
+
+    requests: list[Request] = []
+    comments: list[Comment] = []
     lookups: list[datetime.datetime] = []
 
     class Config:  # pylint: disable=too-few-public-methods

@@ -44,7 +44,7 @@ async def get_api_key(request: Request):
 class InmateSearchResults(BaseModel):
     """Pydantic model for inmate search results, including inmates and errors."""
 
-    inmates: List[schemas.InmateInDB]
+    inmates: List[schemas.Inmate]
     errors: List[str]
 
 
@@ -164,7 +164,7 @@ async def search_inmates(
     return InmateSearchResults(inmates=inmates, errors=errors)
 
 
-@app.get("/inmates/{jurisdiction}/{inmate_id}", response_model=schemas.InmateInDB)
+@app.get("/inmates/{jurisdiction}/{inmate_id}", response_model=schemas.Inmate)
 async def get_inmate(
     jurisdiction: schemas.JurisdictionEnum,
     inmate_id: int,
@@ -238,7 +238,7 @@ async def get_inmate(
 
 
 @app.post(
-    "/inmates/{jurisdiction}/{inmate_id}/requests", response_model=schemas.RequestInDB
+    "/inmates/{jurisdiction}/{inmate_id}/requests", response_model=schemas.Request
 )
 async def add_request(
     jurisdiction: schemas.JurisdictionEnum,
@@ -323,7 +323,7 @@ async def delete_request(
 
 
 @app.post(
-    "/inmates/{jurisdiction}/{inmate_id}/comments", response_model=schemas.CommentInDB
+    "/inmates/{jurisdiction}/{inmate_id}/comments", response_model=schemas.Comment
 )
 async def add_comment(
     jurisdiction: schemas.JurisdictionEnum,
