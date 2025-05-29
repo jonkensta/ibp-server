@@ -116,6 +116,15 @@ class CommentUpdate(CommentBase):
     body: Optional[str] = None
 
 
+class Lookup(LookupBase):
+    """Schema for Lookup records as stored in the database."""
+
+    class Config:  # pylint: disable=too-few-public-methods
+        """Pydantic configuration for ORM mode."""
+
+        from_attributes = True
+
+
 class Request(RequestBase):
     """Schema for Request records as stored in the database."""
 
@@ -157,7 +166,16 @@ class Inmate(InmateBase):
 
     requests: list[Request] = []
     comments: list[Comment] = []
-    lookups: list[datetime.datetime] = []
+    lookups: list[Lookup] = []
+
+    class Config:  # pylint: disable=too-few-public-methods
+        """Pydantic configuration for ORM mode."""
+
+        from_attributes = True
+
+
+class InmateSearchResult(InmateBase):
+    """Schema for inmate search result."""
 
     class Config:  # pylint: disable=too-few-public-methods
         """Pydantic configuration for ORM mode."""

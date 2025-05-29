@@ -40,7 +40,7 @@ def get_database_uri():
 # Initialize FastAPI app
 app = FastAPI(
     title="Inside Books Project API",
-    description="API for managing inmate data, requests, shipments, and comments.",
+    description="IBP API for managing inmate requests.",
     version="0.1.0",
 )
 

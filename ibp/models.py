@@ -7,16 +7,12 @@ import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.types
 from sqlalchemy import Enum  # type: ignore
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Date, DateTime, Integer, String, Text
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import mapped_column  # pylint: disable=no-name-in-module
 from sqlalchemy.orm import Mapped, relationship
-from sqlalchemy.schema import (
-    ForeignKeyConstraint,
-    PrimaryKeyConstraint,
-    UniqueConstraint,
-)
+from sqlalchemy.schema import ForeignKeyConstraint, PrimaryKeyConstraint
 
 from .base import Base, config
 
@@ -84,11 +80,7 @@ class HasInmateIndex:  # pylint: disable=too-few-public-methods
     @declared_attr
     def inmate(cls) -> Mapped["Inmate"]:  # pylint: disable=no-self-argument
         """Declare the relationship to the Inmate model."""
-        return relationship(
-            "Inmate",
-            back_populates="inmates",
-            uselist=False,
-        )
+        return relationship("Inmate", uselist=False)
 
 
 class Inmate(Base):  # pylint: disable=too-many-instance-attributes
@@ -96,19 +88,26 @@ class Inmate(Base):  # pylint: disable=too-many-instance-attributes
 
     __tablename__ = "inmates"
 
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["jurisdiction", "unit_name"],
+            ["units.jurisdiction", "units.name"],
+        ),
+    )
+
     # Composite Primary Key: jurisdiction and id
     jurisdiction: Mapped[str] = mapped_column(
-        Jurisdiction,
-        primary_key=True,
-        nullable=False,
+        Jurisdiction, primary_key=True, nullable=False
     )
     id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
 
     first_name: Mapped[Optional[str]] = mapped_column(String)
     last_name: Mapped[Optional[str]] = mapped_column(String)
 
-    unit_id: Mapped[Optional[int]] = mapped_column(ForeignKey("units.autoid"))
-    unit: Mapped[Optional["Unit"]] = relationship("Unit", uselist=False)
+    unit_name: Mapped[Optional[str]] = mapped_column(String)
+    unit: Mapped[Optional["Unit"]] = relationship(
+        "Unit", foreign_keys=[jurisdiction, unit_name], uselist=False
+    )
 
     race: Mapped[Optional[str]] = mapped_column(String)
     sex: Mapped[Optional[str]] = mapped_column(String)
@@ -133,13 +132,12 @@ class Inmate(Base):  # pylint: disable=too-many-instance-attributes
         collection_class=list,
     )
 
-    _lookups_association: Mapped[list["Lookup"]] = relationship(
+    lookups: Mapped[list["Lookup"]] = relationship(
         "Lookup",
         order_by="desc(Lookup.datetime_created)",
         cascade="all, delete-orphan",
         collection_class=list,
     )
-    lookups = association_proxy("_lookups_association", "datetime_created")
 
     def entry_is_fresh(self) -> bool:
         """Flag if an entry is fresh."""
@@ -201,7 +199,7 @@ class Unit(
     __tablename__ = "units"
 
     jurisdiction: Mapped[str] = mapped_column(Jurisdiction, primary_key=True)
-    name: Mapped[str] = mapped_column(String, nullable=False)
+    name: Mapped[str] = mapped_column(String, primary_key=True)
 
     street1: Mapped[str] = mapped_column(String, nullable=False)
     street2: Mapped[Optional[str]] = mapped_column(String)
@@ -215,11 +213,3 @@ class Unit(
     shipping_method: Mapped[Optional[str]] = mapped_column(
         Enum("Box", "Individual", name="shipping_enum")
     )
-
-    inmates: Mapped[list["Inmate"]] = relationship("Inmate", back_populates="unit")
-
-    @declared_attr
-    def __table_args__(cls):  # pylint: disable=no-self-argument
-        return (
-            UniqueConstraint("jurisdiction", "name", name="uq_units_jurisdiction_name"),
-        )
