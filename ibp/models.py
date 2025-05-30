@@ -8,7 +8,6 @@ import sqlalchemy.orm
 import sqlalchemy.types
 from sqlalchemy import Enum  # type: ignore
 from sqlalchemy import Date, DateTime, Integer, String, Text
-from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import mapped_column  # pylint: disable=no-name-in-module
 from sqlalchemy.orm import Mapped, relationship

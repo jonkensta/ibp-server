@@ -9,7 +9,6 @@ import sqlalchemy
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from nameparser import HumanName
 from pydantic import BaseModel
-from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
