@@ -181,3 +181,10 @@ class InmateSearchResult(InmateBase):
         """Pydantic configuration for ORM mode."""
 
         from_attributes = True
+
+
+class InmateSearchResults(BaseModel):
+    """Pydantic model for inmate search results, including inmates and errors."""
+
+    inmates: list[InmateSearchResult]
+    errors: list[str]

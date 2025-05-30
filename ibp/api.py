@@ -3,12 +3,10 @@
 import datetime
 import itertools
 import logging
-from typing import List
 
 import sqlalchemy
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from nameparser import HumanName
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -57,14 +55,9 @@ async def query_inmates_by_name(session: AsyncSession, first_name: str, last_nam
     )
 
 
-class InmateSearchResults(BaseModel):
-    """Pydantic model for inmate search results, including inmates and errors."""
-
-    inmates: List[schemas.InmateSearchResult]
-    errors: List[str]
 
 
-@app.get("/inmates", response_model=InmateSearchResults)
+@app.get("/inmates", response_model=schemas.InmateSearchResults)
 async def search_inmates(
     session: AsyncSession = Depends(get_session),
     query: str = Query(..., description="Inmate name or ID."),
@@ -96,7 +89,7 @@ async def search_inmates(
         errors = await upsert_inmates_by_inmate_id(session, inmate_id)
         inmates = await query_inmates_by_inmate_id(session, inmate_id)
 
-    return InmateSearchResults(inmates=inmates, errors=errors)
+    return schemas.InmateSearchResults(inmates=inmates, errors=errors)
 
 
 @app.get("/inmates/{jurisdiction}/{inmate_id}", response_model=schemas.Inmate)
@@ -338,7 +331,7 @@ async def delete_comment(
     await session.commit()
 
 
-@app.get("/units", response_model=List[schemas.Unit])
+@app.get("/units", response_model=list[schemas.Unit])
 async def get_all_units(session: AsyncSession = Depends(get_session)):
     """Retrieve a list of all prison units."""
     logger.debug("Retrieving all units")
