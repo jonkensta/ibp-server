@@ -8,7 +8,7 @@ import typing
 
 from .decorators import log_query_by_inmate_id, log_query_by_name
 
-LOGGER = logging.getLogger("PROVIDERS.FBOP")
+LOGGER = logging.getLogger(__name__)
 
 URL = "https://www.bop.gov/PublicInfo/execute/inmateloc"
 

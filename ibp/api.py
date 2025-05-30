@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from . import db, models, schemas
+from . import base, db, models, schemas
 from .base import app
 from .upsert import inmates_by_inmate_id as upsert_inmates_by_inmate_id
 from .upsert import inmates_by_name as upsert_inmates_by_name
@@ -55,6 +55,13 @@ async def query_inmates_by_name(session: AsyncSession, first_name: str, last_nam
     )
 
 
+@app.on_event("startup")
+def configure_logging():
+    """Configure logging."""
+    handlers = base.build_log_handlers()
+    base.configure_root_logger(handlers)
+    base.configure_external_loggers(handlers)
+    logger.info("Starting IBP Application")
 
 
 @app.get("/inmates", response_model=schemas.InmateSearchResults)

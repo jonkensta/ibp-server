@@ -11,7 +11,7 @@ from nameparser import HumanName
 
 from .decorators import log_query_by_inmate_id, log_query_by_name
 
-LOGGER = logging.getLogger("PROVIDERS.TDCJ")
+LOGGER = logging.getLogger(__name__)
 
 BASE_URL = "https://inmate.tdcj.texas.gov"
 SEARCH_PATH = "InmateSearch/search.action"
