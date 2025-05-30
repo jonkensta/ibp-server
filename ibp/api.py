@@ -14,8 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from . import models, schemas
-from .base import AsyncSessionLocal, app, config
+from . import db, models, schemas
+from .base import app
 from .upsert import inmates_by_inmate_id as upsert_inmates_by_inmate_id
 from .upsert import inmates_by_name as upsert_inmates_by_name
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 async def get_session():
     """Dependency that provides an asynchronous SQLAlchemy session."""
-    async with AsyncSessionLocal() as session:
+    async with db.async_session() as session:
         yield session
 
 

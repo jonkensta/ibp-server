@@ -7,9 +7,6 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from fastapi import FastAPI
-from sqlalchemy import MetaData
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
 
 
 def get_toplevel_path() -> Path:
@@ -28,51 +25,11 @@ def read_server_config():
 
 config = read_server_config()
 
-
-def get_database_uri():
-    """Get URI of sqlite3 database."""
-    toplevel = get_toplevel_path()
-    filepath = toplevel.joinpath(config.get("database", "database")).absolute()
-    # For SQLite, using 'sqlite+aiosqlite' for async support with SQLAlchemy
-    return f"sqlite+aiosqlite:///{filepath}"
-
-
-# Initialize FastAPI app
 app = FastAPI(
     title="Inside Books Project API",
     description="IBP API for managing inmate requests.",
     version="0.1.0",
 )
-
-# Configure SQLAlchemy for async operations
-DATABASE_URL = get_database_uri()
-engine = create_async_engine(DATABASE_URL, echo=True)
-AsyncSessionLocal = async_sessionmaker(
-    autocommit=False, autoflush=False, bind=engine, class_=AsyncSession
-)
-
-
-class Base(DeclarativeBase):  # pylint: disable=too-few-public-methods
-    """Base for SQLAlchemy models."""
-
-    metadata = MetaData(
-        naming_convention={
-            "ix": "ix_%(column_0_label)s",
-            "uq": "uq_%(table_name)s_%(column_0_name)s",
-            "ck": "ck_%(table_name)s_%(constraint_name)s",
-            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-            "pk": "pk_%(table_name)s",
-        }
-    )
-
-    def update_from_kwargs(self, **kwargs):
-        """Update a model object from given keyword arguments."""
-        for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-            else:
-                msg = f"'{self.__class__}' has no attribute named '{key}'"
-                raise AttributeError(msg)
 
 
 class RotatingStream:

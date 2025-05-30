@@ -14,7 +14,8 @@ from sqlalchemy.orm import mapped_column  # pylint: disable=no-name-in-module
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.schema import ForeignKeyConstraint, PrimaryKeyConstraint
 
-from .base import Base, config
+from .base import config
+from .db import Base
 
 
 class ReleaseDate(sqlalchemy.types.TypeDecorator):
