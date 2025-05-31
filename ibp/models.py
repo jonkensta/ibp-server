@@ -134,6 +134,7 @@ class Inmate(Base):  # pylint: disable=too-many-instance-attributes
 
     lookups: Mapped[list["Lookup"]] = relationship(
         "Lookup",
+        back_populates="inmate",
         order_by="desc(Lookup.datetime_created)",
         cascade="all, delete-orphan",
         collection_class=list,
