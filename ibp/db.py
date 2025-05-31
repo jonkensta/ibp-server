@@ -18,7 +18,7 @@ def get_uri():
 
 def build_engine():
     """Build an async engine."""
-    return create_async_engine(get_uri(), echo=True)
+    return create_async_engine(get_uri())
 
 
 def build_async_sessionmaker():

@@ -58,7 +58,7 @@ async def query_inmates_by_name(session: AsyncSession, first_name: str, last_nam
 @app.on_event("startup")
 def configure_logging():
     """Configure logging."""
-    handlers = base.build_log_handlers()
+    handlers = list(base.build_log_handlers())
     base.configure_root_logger(handlers)
     base.configure_external_loggers(handlers)
     logger.info("Starting IBP Application")
@@ -83,16 +83,16 @@ async def search_inmates(
             logger.debug("Failed to parse query: %s", query)
 
             # pylint: disable=raise-missing-from
-            status_code = (status.HTTP_400_BAD_REQUEST,)
-            detail = ("Query must be an inmate name or ID.",)
+            status_code = status.HTTP_400_BAD_REQUEST
+            detail = "Query must be an inmate name or ID."
             raise HTTPException(status_code=status_code, detail=detail)
 
-        logger.debug("Querying inmates by name: %s %s", name.first, name.last)
+        logger.debug("querying inmates by name: %s %s", name.first, name.last)
         errors = await upsert_inmates_by_name(session, name.first, name.last)
         inmates = await query_inmates_by_name(session, name.first, name.last)
 
     else:
-        logger.debug("Querying inmates by ID: %d", inmate_id)
+        logger.debug("querying inmates by ID: %d", inmate_id)
         errors = await upsert_inmates_by_inmate_id(session, inmate_id)
         inmates = await query_inmates_by_inmate_id(session, inmate_id)
 
@@ -144,9 +144,10 @@ async def get_inmate(
 
     lookup = models.Lookup(datetime_created=datetime.datetime.now(), index=next_index)
     inmate.lookups.append(lookup)
+    inmate.lookups.sort(key=lambda lookup: lookup.datetime_created)
 
     session.add(lookup)
-    del inmate.lookups[3:]
+    del inmate.lookups[:-3]
 
     await session.commit()
     await session.refresh(inmate)
@@ -203,7 +204,7 @@ async def add_request(
     await session.refresh(request)
 
     logger.debug(
-        "Adding request #%d with %s postmark for %s inmate #%08d",
+        "adding request #%d with %s postmark for %s inmate #%08d",
         request.index,
         request.date_postmarked,
         inmate.jurisdiction,
@@ -214,7 +215,7 @@ async def add_request(
 
 
 @app.delete(
-    "/requests/{jurisdiction}/{inmate_id}/{request_index}",
+    "/inmates/{jurisdiction}/{inmate_id}/requests/{request_index}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_request(
@@ -266,9 +267,9 @@ async def add_comment(
     ).scalar_one_or_none()
 
     if inmate is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Inmate not found."
-        )
+        status_code = status.HTTP_404_NOT_FOUND
+        detail = "Inmate not found."
+        raise HTTPException(status_code=status_code, detail=detail)
 
     used_indices = (
         (
@@ -295,7 +296,7 @@ async def add_comment(
     await session.refresh(comment)
 
     logger.debug(
-        "Adding comment #%d for %s inmate #%08d",
+        "adding comment #%d for %s inmate #%08d",
         comment.index,
         inmate.jurisdiction,
         inmate.id,
@@ -305,7 +306,7 @@ async def add_comment(
 
 
 @app.delete(
-    "/comments/{jurisdiction}/{inmate_id}/{comment_index}",
+    "/inmates/{jurisdiction}/{inmate_id}/comments/{comment_index}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_comment(
@@ -331,17 +332,20 @@ async def delete_comment(
         )
 
     logger.debug(
-        "Deleting comment #%d for inmate %s %d", comment_index, jurisdiction, inmate_id
+        "deleting comment #%d for inmate %s %d",
+        comment_index,
+        jurisdiction,
+        inmate_id,
     )
 
-    await session.delete(comment_to_delete)
+    await session.delete(comment)
     await session.commit()
 
 
 @app.get("/units", response_model=list[schemas.Unit])
 async def get_all_units(session: AsyncSession = Depends(get_session)):
     """Retrieve a list of all prison units."""
-    logger.debug("Retrieving all units")
+    logger.debug("retrieving all units")
     return (await session.execute(select(models.Unit))).scalars().all()
 
 
@@ -353,7 +357,7 @@ async def get_unit(
 ):
     """Retrieve a single unit by its ID."""
 
-    logger.debug("Retrieving unit with jurisdiction=%s, name=%s", jurisdiction, name)
+    logger.debug("retrieving unit with jurisdiction=%s, name=%s", jurisdiction, name)
 
     unit = (
         await session.execute(
@@ -379,7 +383,7 @@ async def update_unit(
     session: AsyncSession = Depends(get_session),
 ):
     """Update an existing unit."""
-    logger.debug("Updating unit with jurisdiction=%s, name=%s", jurisdiction, name)
+    logger.debug("updating unit with jurisdiction=%s, name=%s", jurisdiction, name)
 
     unit = (
         await session.execute(
@@ -398,5 +402,5 @@ async def update_unit(
     await session.commit()
     await session.refresh(unit)
 
-    logger.debug("Updated unit with jurisdiction=%s, name=%s", jurisdiction, name)
+    logger.debug("updated unit with jurisdiction=%s, name=%s", jurisdiction, name)
     return unit
