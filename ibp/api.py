@@ -27,11 +27,10 @@ async def get_session():
 
 async def query_inmates_by_inmate_id(session: AsyncSession, inmate_id: int):
     """Query inmates table by inmate ID."""
-    lower = sqlalchemy.func.lower
     return (
         (
             await session.execute(
-                select(models.Inmate).where(lower(models.Inmate.id) == inmate_id)
+                select(models.Inmate).where(models.Inmate.id == inmate_id)
             )
         )
         .scalars()
