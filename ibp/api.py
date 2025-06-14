@@ -206,8 +206,8 @@ async def add_request(
         "adding request #%d with %s postmark for %s inmate #%08d",
         request.index,
         request.date_postmarked,
-        inmate.jurisdiction,
-        inmate.id,
+        jurisdiction,
+        inmate_id,
     )
 
     return request
@@ -297,8 +297,8 @@ async def add_comment(
     logger.debug(
         "adding comment #%d for %s inmate #%08d",
         comment.index,
-        inmate.jurisdiction,
-        inmate.id,
+        jurisdiction,
+        inmate_id,
     )
 
     return comment
