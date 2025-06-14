@@ -17,8 +17,8 @@ jobs:
       - name: Install dependencies
         run: uv pip install --system .[dev]
       - name: Check formatting
-        run: format --check
+        run: python -m black ibp --check
       - name: Lint
-        run: lint
+        run: python -m pylint ibp
       - name: Typecheck
-        run: typecheck
+        run: python -m mypy ibp

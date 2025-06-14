@@ -70,11 +70,10 @@ Install optional development dependencies using `uv`:
 uv pip install .[dev]
 ```
 
-This provides the `format`, `lint`, and `typecheck` commands for running
-Black, Pylint, and Mypy against the `ibp` package:
+Use the installed tools to check the `ibp` package:
 
 ```bash
-format       # run Black
-lint         # run Pylint
-typecheck    # run Mypy
+python -m black ibp --check
+python -m pylint ibp
+python -m mypy ibp
 ```

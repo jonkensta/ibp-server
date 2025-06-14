@@ -28,10 +28,6 @@ dev = [
     "types-beautifulsoup4",
 ]
 
-[project.scripts]
-format = "devtools:format"
-lint = "devtools:lint"
-typecheck = "devtools:typecheck"
 
 [project.urls]
 Homepage = "https://github.com/jonkensta" # Replace with your actual GitHub repo link
@@ -46,7 +42,6 @@ where = ["."] # Search for packages in the current directory
 include = ["ibp"] # Include the 'ibp' package
 
 [tool.setuptools]
-py-modules = ["devtools"]
 
 [tool.setuptools.package-data]
 "ibp" = ["conf/*.conf"]
