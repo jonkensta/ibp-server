@@ -5,7 +5,7 @@ import itertools
 import logging
 
 import sqlalchemy
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import Depends, HTTPException, Query, status
 from nameparser import HumanName
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
