@@ -401,5 +401,5 @@ async def update_unit(
     await session.commit()
     await session.refresh(unit)
 
-    logger.debug("updated unit with jurisdiction=%s, name=%s", jurisdiction, name)
+    logger.debug("updated %s %s unit", jurisdiction, name)
     return unit
