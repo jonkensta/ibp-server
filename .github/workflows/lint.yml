@@ -11,14 +11,26 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - name: Install uv
-        run: pip install uv
+          python-version: "3.11"
+
       - name: Install dependencies
-        run: uv pip install --system .[dev]
+        run: |
+          pip install uv
+          uv venv
+          source .venv/bin/activate
+          uv sync
+
       - name: Check formatting
-        run: python -m black ibp --check
+        run: |
+          source .venv/bin/activate
+          black ibp --check
+
       - name: Lint
-        run: python -m pylint ibp
+        run: |
+          source .venv/bin/activate
+          pylint ibp
+
       - name: Typecheck
-        run: python -m mypy ibp
+        run: |
+          source .venv/bin/activate
+          mypy ibp
