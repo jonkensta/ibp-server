@@ -93,7 +93,7 @@ async def query(  # pylint: disable=too-many-locals
         entry["href"] = anchor.get("href") if anchor is not None else None
         return entry
 
-    entries = filter(None, map(row_to_entry, rows))
+    entries: typing.Iterable[dict[str, str]] = filter(None, map(row_to_entry, rows))
 
     def entry_to_inmate(entry: dict):
         """Convert TDCJ inmate entry to inmate dictionary."""
