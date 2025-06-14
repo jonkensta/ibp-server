@@ -173,12 +173,6 @@ class Request(HasInmateIndex, Base):  # pylint: disable=too-few-public-methods
         Enum("Filled", "Tossed", name="action_enum"), nullable=False
     )
 
-    @property
-    def status(self) -> str:
-        """Return status of a request."""
-        shipped = self.shipment and self.shipment.date_shipped and "Shipped"
-        return shipped or self.action
-
 
 class Comment(HasInmateIndex, Base):  # pylint: disable=too-few-public-methods
     """Sqlalchemy model for IBP comments."""

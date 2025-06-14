@@ -129,7 +129,6 @@ class Request(RequestBase):
     """Schema for Request records as stored in the database."""
 
     index: int
-    status: str
 
     class Config:  # pylint: disable=too-few-public-methods
         """Pydantic configuration for ORM mode."""
