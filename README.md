@@ -61,3 +61,20 @@ FLASK_ENV=development python -m ibp
 ```
 
 By default, this will load the interface on [localhost port 8000](http://localhost:8000).
+
+## Dev tools
+
+Install optional development dependencies using `uv`:
+
+```bash
+uv pip install .[dev]
+```
+
+This provides the `format`, `lint`, and `typecheck` commands for running
+Black, Pylint, and Mypy against the `ibp` package:
+
+```bash
+format       # run Black
+lint         # run Pylint
+typecheck    # run Mypy
+```

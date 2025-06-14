@@ -20,6 +20,19 @@ dependencies = [
     "pymates @ git+https://github.com/jonkensta/inmate-providers@curl",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "black>=23.7",
+    "mypy>=1.5",
+    "pylint>=3.0",
+    "types-beautifulsoup4",
+]
+
+[project.scripts]
+format = "devtools:format"
+lint = "devtools:lint"
+typecheck = "devtools:typecheck"
+
 [project.urls]
 Homepage = "https://github.com/jonkensta" # Replace with your actual GitHub repo link
 "Bug Tracker" = "https://github.com/jonkensta/issues" # Replace with your actual GitHub repo link
@@ -31,6 +44,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."] # Search for packages in the current directory
 include = ["ibp"] # Include the 'ibp' package
+
+[tool.setuptools]
+py-modules = ["devtools"]
 
 [tool.setuptools.package-data]
 "ibp" = ["conf/*.conf"]
@@ -576,4 +592,3 @@ redefining-builtins-modules = ["six.moves", "past.builtins", "future.builtins", 
 line-length = 88
 
 [tool.mypy]
-python_executable = "venv/bin/python"
