@@ -11,7 +11,6 @@ keywords = ["fastapi", "sqlalchemy", "api", "database"]
 license = { text = "MIT" } # Or choose another appropriate license
 
 dependencies = [
-    "alembic>=1.8", # Specify a reasonable minimum version
     "fastapi>=0.100", # Specify a reasonable minimum version
     "uvicorn[standard]>=0.20", # Include standard extras for common use cases
     "aiosqlite>=0.17",
@@ -20,14 +19,14 @@ dependencies = [
     "pymates @ git+https://github.com/jonkensta/inmate-providers@curl",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
+    "alembic>=1.8",
     "black>=23.7",
     "mypy>=1.5",
     "pylint>=3.0",
     "types-beautifulsoup4",
 ]
-
 
 [project.urls]
 Homepage = "https://github.com/jonkensta" # Replace with your actual GitHub repo link
