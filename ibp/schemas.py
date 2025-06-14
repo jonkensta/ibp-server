@@ -51,7 +51,7 @@ class InmateBase(BaseModel):
     id: int
     race: Optional[str] = None
     sex: Optional[str] = None
-    release: Optional[datetime.date] = None
+    release: Optional[datetime.date | str] = None
     url: Optional[str] = None
 
 
