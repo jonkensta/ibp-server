@@ -16,7 +16,6 @@ dependencies = [
     "aiosqlite>=0.17",
     "SQLAlchemy[asyncio]>=2.0", # Include asyncio extra for async support
     "nameparser>=1.1",
-    "pymates @ git+https://github.com/jonkensta/inmate-providers@curl",
 ]
 
 [dependency-groups]
