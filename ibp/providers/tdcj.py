@@ -7,7 +7,7 @@ import typing
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
-from nameparser import HumanName
+from nameparser import HumanName  # type: ignore[import]
 
 from .misc import run_curl_exec
 from .types import QueryResult
@@ -104,6 +104,8 @@ async def query(  # pylint: disable=too-many-locals
         inmate_id = parse_inmate_id(entry["inmateNum"])
 
         name = HumanName(entry.get("Name", ""))
+        first: str = name.first
+        last: str = name.last
 
         def build_url(href):
             return urljoin(BASE_URL, href)
@@ -123,8 +125,8 @@ async def query(  # pylint: disable=too-many-locals
         return QueryResult(
             id=inmate_id,
             jurisdiction="Texas",
-            first_name=name.first,
-            last_name=name.last,
+            first_name=first,
+            last_name=last,
             unit=entry["Unit of Assignment"],
             race=entry.get("Race", None),
             sex=entry.get("Gender", None),
