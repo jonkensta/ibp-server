@@ -7,4 +7,4 @@ Flask-WTF
 Jinja2
 gunicorn
 SQLAlchemy
-pymates @ git+https://github.com/jonkensta/inmate-providers@curl
+pymates @ git+https://github.com/jonkensta/inmate-providers@main
