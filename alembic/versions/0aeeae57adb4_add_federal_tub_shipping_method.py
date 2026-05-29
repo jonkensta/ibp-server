@@ -16,13 +16,21 @@ from alembic import op
 import sqlalchemy as sa
 
 
+# The metadata naming convention in ibp/base.py is
+# `ck_%(table_name)s_%(constraint_name)s`, so the bare name "shipping_enum"
+# below resolves to the live constraint name `ck_units_shipping_enum`.
+# Passing the full name would double-prefix it.
+OLD_ENUM = sa.Enum("Box", "Individual", name="shipping_enum")
+NEW_ENUM = sa.Enum("Box", "Individual", "Federal Tub", name="shipping_enum")
+
+
 def upgrade():
     with op.batch_alter_table("units") as batch:
         batch.drop_constraint("shipping_enum", type_="check")
         batch.alter_column(
             "shipping_method",
-            existing_type=sa.String(length=10),
-            type_=sa.String(length=11),
+            existing_type=OLD_ENUM,
+            type_=NEW_ENUM,
             existing_nullable=True,
         )
         batch.create_check_constraint(
@@ -46,8 +54,8 @@ def downgrade():
         batch.drop_constraint("shipping_enum", type_="check")
         batch.alter_column(
             "shipping_method",
-            existing_type=sa.String(length=11),
-            type_=sa.String(length=10),
+            existing_type=NEW_ENUM,
+            type_=OLD_ENUM,
             existing_nullable=True,
         )
         batch.create_check_constraint(
