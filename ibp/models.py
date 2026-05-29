@@ -198,7 +198,9 @@ class Unit(db.Model):  # pylint: disable=too-many-instance-attributes
         Enum("Texas", "Federal", name="jurisdiction_enum"), nullable=False
     )
 
-    shipping_method = Column(Enum("Box", "Individual", name="shipping_enum"))
+    shipping_method = Column(
+        Enum("Box", "Individual", "Federal Tub", name="shipping_enum")
+    )
 
     inmates = relationship("Inmate", back_populates="unit")
     shipments = relationship("Shipment", back_populates="unit")
