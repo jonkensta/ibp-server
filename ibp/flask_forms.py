@@ -78,7 +78,12 @@ class Unit(FlaskForm):
     )
     shipping_method = fields.SelectField(
         'Shipping Method',
-        choices=[('', ''), ('Box', 'Box'), ('Individual', 'Individual')]
+        choices=[
+            ('', ''),
+            ('Box', 'Box'),
+            ('Individual', 'Individual'),
+            ('Federal Tub', 'Federal Tub'),
+        ]
     )
     url = fields.StringField(
         'URL',
